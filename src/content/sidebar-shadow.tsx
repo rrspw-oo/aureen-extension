@@ -361,18 +361,15 @@ const SidebarApp: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', backgroundColor: '#F5F4FA', borderBottom: '1px solid #E2E0EE', flexShrink: 0 }}>
-        <TabButton active={activeTab === 'highlights'} onClick={() => setActiveTab('highlights')}>Highlights</TabButton>
-        <TabButton active={activeTab === 'images'} onClick={() => setActiveTab('images')}>Captures</TabButton>
-      </div>
-
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflow: 'hidden', background: '#F5F4FA' }}>
         {activeTab === 'highlights' ? (
           <Sidebar initialData={data} />
         ) : (
           <ImageCaptureTab initialData={data} />
         )}
       </div>
+
+      <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 };
