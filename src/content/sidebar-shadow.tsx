@@ -149,13 +149,13 @@ const HeaderIconButton: React.FC<{ title: string; onClick: () => void; children:
     title={title}
     onClick={onClick}
     style={{
-      background: 'none', border: 'none', cursor: 'pointer',
-      width: '32px', height: '32px', display: 'flex',
+      background: 'rgba(0,0,0,0.07)', border: 'none', cursor: 'pointer',
+      width: '28px', height: '28px', display: 'flex',
       alignItems: 'center', justifyContent: 'center',
-      borderRadius: '6px', opacity: 0.85, transition: 'opacity 0.15s',
+      borderRadius: '6px', transition: 'background 0.12s',
     }}
-    onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-    onMouseLeave={e => (e.currentTarget.style.opacity = '0.85')}
+    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.13)')}
+    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.07)')}
   >
     {children}
   </button>
