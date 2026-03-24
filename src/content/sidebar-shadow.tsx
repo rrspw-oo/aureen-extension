@@ -161,20 +161,6 @@ const HeaderIconButton: React.FC<{ title: string; onClick: () => void; children:
   </button>
 );
 
-const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
-  <button
-    onClick={onClick}
-    style={{
-      flex: 1, height: '36px', border: 'none', cursor: 'pointer',
-      fontSize: '13px', fontWeight: 500, transition: 'all 0.15s',
-      backgroundColor: active ? '#DDDDEF' : 'transparent',
-      color: active ? '#1f2937' : '#6b7280',
-      fontFamily: 'inherit',
-    }}
-  >
-    {children}
-  </button>
-);
 
 const MenuAction: React.FC<{ label: string; onClick: () => void; danger?: boolean }> = ({ label, onClick, danger }) => (
   <button
@@ -192,6 +178,63 @@ const MenuAction: React.FC<{ label: string; onClick: () => void; danger?: boolea
     {label}
   </button>
 );
+
+const BottomTabBar: React.FC<{ activeTab: TabType; onTabChange: (tab: TabType) => void }> = ({ activeTab, onTabChange }) => {
+  const GOLD = '#C9A86C';
+  const MUTED = '#9492A8';
+
+  return (
+    <div style={{ display: 'flex', borderTop: '1px solid #E2E0EE', background: 'white', flexShrink: 0 }}>
+      <button
+        onClick={() => onTabChange('highlights')}
+        style={{
+          flex: 1, padding: '9px 0', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: '3px', border: 'none', background: 'none',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke={activeTab === 'highlights' ? GOLD : MUTED}
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span style={{
+          fontSize: '10px',
+          color: activeTab === 'highlights' ? GOLD : MUTED,
+          fontWeight: activeTab === 'highlights' ? 600 : 400,
+        }}>
+          Highlights
+        </span>
+      </button>
+
+      <button
+        onClick={() => onTabChange('images')}
+        style={{
+          flex: 1, padding: '9px 0', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: '3px', border: 'none', background: 'none',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke={activeTab === 'images' ? GOLD : MUTED}
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <rect x="2" y="6" width="20" height="14" rx="2"/>
+          <circle cx="12" cy="13" r="3"/>
+          <path d="M8 6l1.5-2.5h5L16 6"/>
+        </svg>
+        <span style={{
+          fontSize: '10px',
+          color: activeTab === 'images' ? GOLD : MUTED,
+          fontWeight: activeTab === 'images' ? 600 : 400,
+        }}>
+          Captures
+        </span>
+      </button>
+    </div>
+  );
+};
 
 /**
  * Sidebar App Component (wraps the main Sidebar with Tab switching)
