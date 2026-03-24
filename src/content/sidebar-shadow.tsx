@@ -74,10 +74,9 @@ export function mountSidebarWithShadow(data?: Record<string, unknown>): void {
   appContainer.style.cssText = `
     width: 100%;
     height: 100%;
-    background: white;
+    background: #F5F4FA;
     border-left: 1px solid #d1d5db;
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
-    overflow-y: auto;
     pointer-events: auto;
   `;
   shadowRoot.appendChild(appContainer);
@@ -168,8 +167,8 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
     style={{
       flex: 1, height: '36px', border: 'none', cursor: 'pointer',
       fontSize: '13px', fontWeight: 500, transition: 'all 0.15s',
-      backgroundColor: active ? '#7C6EAF' : 'transparent',
-      color: active ? 'white' : '#9492A8',
+      backgroundColor: active ? '#DDDDEF' : 'transparent',
+      color: active ? '#1f2937' : '#6b7280',
       fontFamily: 'inherit',
     }}
   >
@@ -270,26 +269,26 @@ const SidebarApp: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
 
       <div style={{
-        padding: '0 12px', height: '48px', backgroundColor: '#7C6EAF',
+        padding: '0 12px', height: '48px', backgroundColor: '#DDDDEF',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#C9A86C', display: 'inline-block' }} />
-          <span style={{ fontSize: '16px', fontWeight: 600, color: 'white', letterSpacing: '0.01em' }}>Aureen</span>
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', letterSpacing: '0.01em' }}>Aureen</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
           <HeaderIconButton title="Minimize" onClick={() => hideSidebarShadow(true)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <line x1="3" y1="8" x2="13" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="3" y1="8" x2="13" y2="8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </HeaderIconButton>
 
           <HeaderIconButton title="Options" onClick={() => setMenuOpen(o => !o)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="3" r="1.5" fill="white"/>
-              <circle cx="8" cy="8" r="1.5" fill="white"/>
-              <circle cx="8" cy="13" r="1.5" fill="white"/>
+              <circle cx="8" cy="3" r="1.5" fill="#4b5563"/>
+              <circle cx="8" cy="8" r="1.5" fill="#4b5563"/>
+              <circle cx="8" cy="13" r="1.5" fill="#4b5563"/>
             </svg>
           </HeaderIconButton>
 
@@ -313,7 +312,7 @@ const SidebarApp: React.FC = () => {
 
           <HeaderIconButton title="Close" onClick={() => hideSidebarShadow(false)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4l8 8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M12 4L4 12M4 4l8 8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </HeaderIconButton>
         </div>
