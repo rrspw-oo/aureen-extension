@@ -97,7 +97,7 @@ export async function startFullPageCapture(): Promise<void> {
 
     window.scrollTo(0, 0);
     await waitFrame();
-    await wait(150);
+    await wait(600);
 
     const totalHeight    = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
     const viewportHeight = window.innerHeight;
@@ -110,7 +110,7 @@ export async function startFullPageCapture(): Promise<void> {
     while (y < totalHeight) {
       window.scrollTo(0, y);
       await waitFrame();
-      await wait(150);
+      await wait(600);
       const actualScrollY = window.scrollY;
       const dataUrl = await captureSegment();
       segments.push({ dataUrl, scrollY: actualScrollY });
