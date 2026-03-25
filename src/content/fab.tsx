@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import styles from '@/index.css?inline';
 import { registerFabFns, hideFab } from './fab-bridge';
 import { startScreenshotCapture } from './screenshot-capture-handler';
+import { startFullPageCapture } from './full-page-capture-handler';
+import { mountSidebarWithShadow } from './sidebar-shadow';
 
 let fabHost: HTMLDivElement | null = null;
 let fabReactRoot: ReturnType<typeof createRoot> | null = null;
@@ -44,7 +46,7 @@ function unmountFab(): void {
 
 registerFabFns(mountFab, unmountFab);
 
-const PRIMARY = '#7C6EAF';
+const PRIMARY = '#DDDDEF';
 const ACCENT = '#C9A86C';
 
 const FabButton: React.FC = () => {
@@ -52,12 +54,17 @@ const FabButton: React.FC = () => {
 
   const handleExpandSidebar = (): void => {
     hideFab();
-    import('./sidebar-shadow').then(m => m.mountSidebarWithShadow());
+    mountSidebarWithShadow();
   };
 
   const handleScreenshot = (): void => {
     hideFab();
     startScreenshotCapture();
+  };
+
+  const handleFullPageScreenshot = (): void => {
+    hideFab();
+    startFullPageCapture();
   };
 
   return (
@@ -91,6 +98,19 @@ const FabButton: React.FC = () => {
               </svg>
             }
           />
+          <SubButton
+            label="Full page"
+            color={ACCENT}
+            onClick={handleFullPageScreenshot}
+            icon={
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="2" y="1" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                <line x1="5" y1="6" x2="15" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="5" y1="10" x2="15" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            }
+          />
         </>
       )}
 
@@ -101,14 +121,14 @@ const FabButton: React.FC = () => {
           width: '56px', height: '56px', borderRadius: '50%',
           background: PRIMARY, border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(124,110,175,0.4)',
+          boxShadow: '0 4px 16px rgba(180,180,210,0.5)',
           transition: 'transform 0.15s ease',
         }}
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
       >
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <circle cx="14" cy="14" r="5" fill="white"/>
+          <circle cx="14" cy="14" r="5" fill="#4a4870"/>
           {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg, i) => (
             <line
               key={i}
@@ -116,7 +136,7 @@ const FabButton: React.FC = () => {
               y1={14 + 7 * Math.sin((deg * Math.PI) / 180)}
               x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
               y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
-              stroke="white" strokeWidth="1.5" strokeLinecap="round"
+              stroke="#4a4870" strokeWidth="1.5" strokeLinecap="round"
             />
           ))}
         </svg>
