@@ -145,10 +145,10 @@ const FabButton: React.FC = () => {
           >
             <span
               style={{
-                background: 'rgba(20,18,35,0.78)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                color: 'rgba(255,255,255,0.92)',
+                background: 'rgba(255,255,255,0.88)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                color: 'rgba(50,44,80,0.92)',
                 fontSize: '12px',
                 fontWeight: 500,
                 letterSpacing: '0.01em',
@@ -221,17 +221,26 @@ const FabButton: React.FC = () => {
         }}
       >
         <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
+          width="28"
+          height="28"
+          viewBox="0 0 28 28"
           fill="none"
           style={{
             transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
             transform: expanded ? 'rotate(135deg)' : 'rotate(0deg)',
           }}
         >
-          <line x1="12" y1="5" x2="12" y2="19" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-          <line x1="5"  y1="12" x2="19" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          <circle cx="14" cy="14" r="5" fill="white"/>
+          {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg, i) => (
+            <line
+              key={i}
+              x1={14 + 7  * Math.cos((deg * Math.PI) / 180)}
+              y1={14 + 7  * Math.sin((deg * Math.PI) / 180)}
+              x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
+              y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
+              stroke="white" strokeWidth="1.5" strokeLinecap="round"
+            />
+          ))}
         </svg>
       </button>
     </div>
