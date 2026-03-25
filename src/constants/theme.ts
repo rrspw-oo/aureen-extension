@@ -7,9 +7,9 @@
  * Brand colors
  */
 export const COLORS = {
-  primary: '#7C6EAF',
-  primaryHover: '#6B5D9E',
-  primaryDark: '#5A4D8D',
+  primary: '#9B8FCC',
+  primaryHover: '#8A7EBB',
+  primaryDark: '#7C6EAF',
 
   accent: '#C9A86C',
   accentHover: '#B8975B',

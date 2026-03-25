@@ -1,0 +1,200 @@
+/**
+ * Global styles with Tailwind CSS directives
+ * Includes base styles, components, and utilities
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Base layer customizations
+ */
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  /* Ensure font-family applies to all elements in Shadow DOM */
+  html,
+  body,
+  div,
+  span,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  button,
+  input,
+  textarea,
+  select,
+  label {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  }
+}
+
+/**
+ * Component layer for reusable patterns
+ */
+@layer components {
+  /* Highlight mark styling */
+  .highlight-mark {
+    @apply cursor-pointer transition-opacity duration-200;
+    @apply border-2 border-transparent;
+  }
+
+  .highlight-mark:hover {
+    @apply opacity-80 border-primary;
+  }
+
+  /* Button base styles */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark;
+    @apply focus:ring-primary;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary;
+    @apply focus:ring-secondary;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border-2 border-primary text-primary;
+    @apply hover:bg-primary hover:text-white;
+    @apply focus:ring-primary;
+  }
+
+  /* Input base styles */
+  .input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+    @apply placeholder-gray-400;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-lg shadow-md p-4 border border-gray-200;
+  }
+
+  /* Tag badge styles */
+  .tag-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+    @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+    @apply transition-colors duration-150;
+  }
+
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded hover:bg-gray-500;
+  }
+}
+
+/**
+ * Utility layer for custom utilities
+ */
+@layer utilities {
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-in;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  /* Focus visible for accessibility */
+  .focus-visible-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+}
+
+/**
+ * Animations
+ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/**
+ * Chrome extension specific styles
+ */
+
+/* Overlay toolbar for text selection */
+.highlight-toolbar {
+  @apply fixed z-[10000] bg-white rounded-lg shadow-xl border border-gray-200;
+  @apply animate-fade-in;
+}
+
+/* Sidebar container */
+.sidebar-container {
+  @apply fixed top-0 right-0 h-screen bg-white shadow-2xl;
+  @apply border-l border-gray-200 z-[9999];
+  @apply animate-slide-in-right overflow-hidden;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-60;
+  @apply flex items-center justify-center z-[10000];
+  @apply overflow-y-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-content {
+  @apply bg-white rounded-lg max-w-[90vw] max-h-[90vh];
+  @apply overflow-y-auto shadow-2xl;
+}
+
+/* Dark mode support (optional future enhancement) */
+@media (prefers-color-scheme: dark) {
+  /* Add dark mode styles here when implementing */
+}
+
+/**
+ * Print styles
+ */
+@media print {
+  .highlight-toolbar,
+  .sidebar-container {
+    @apply hidden;
+  }
+}

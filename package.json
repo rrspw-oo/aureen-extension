@@ -1,0 +1,43 @@
+{
+  "name": "aureen",
+  "version": "1.0.0",
+  "description": "Chrome extension for text highlighting with tags and translation",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.crxjs.ts",
+    "dev:legacy": "vite",
+    "build": "tsc --noEmit && vite build --config vite.config.crxjs.ts && vite build --config vite.config.content.ts",
+    "build:legacy": "tsc --noEmit && tsx build-extension.ts",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext ts,tsx",
+    "preview": "vite preview",
+    "security-audit": "npm audit --production",
+    "security-check": "npm run type-check && npm run lint && npm run security-audit"
+  },
+  "dependencies": {
+    "i18next": "^23.15.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^15.0.2",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.2.1",
+    "@types/chrome": "^0.0.270",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "baseline-browser-mapping": "^2.10.10",
+    "eslint": "^9.11.1",
+    "postcss": "^8.4.47",
+    "prettier": "^3.3.3",
+    "tailwindcss": "^3.4.13",
+    "tsx": "^4.20.6",
+    "typescript": "^5.6.2",
+    "vite": "^7.1.11",
+    "vite-plugin-web-extension": "^4.4.5"
+  }
+}

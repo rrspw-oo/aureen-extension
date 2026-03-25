@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "Text Highlighter",
+    "description": "Organize your highlights with tags and translations"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "export": "Export",
+    "import": "Import",
+    "search": "Search",
+    "loading": "Loading...",
+    "close": "Close",
+    "copy": "Copy"
+  },
+  "highlight": {
+    "create": "Create Highlight",
+    "selected_text": "Selected Text",
+    "color": "Highlight Color",
+    "save_highlight": "Save Highlight",
+    "saving": "Saving...",
+    "delete_confirm": "Are you sure you want to delete this highlight?",
+    "no_highlights": "No highlights found",
+    "no_highlights_message": "Select text on any webpage to create highlights"
+  },
+  "tags": {
+    "label": "Tags (hashtags)",
+    "placeholder": "Add tags (space or comma separated)",
+    "filter_by_tags": "Filter by Tags",
+    "clear_all": "Clear all",
+    "select_all": "Select all",
+    "no_tags": "No tags yet",
+    "max_tags": "Maximum {{max}} tags reached"
+  },
+  "translation": {
+    "title": "Translation",
+    "original_text": "Original Text",
+    "traditional_chinese": "Traditional Chinese (繁體中文)",
+    "french": "French (Français)",
+    "copy_to_clipboard": "Copied to clipboard!",
+    "translation_failed": "Translation failed. Please try again."
+  },
+  "popup": {
+    "highlights_count": "Highlights",
+    "tags_count": "Tags",
+    "storage_used": "Storage",
+    "recent_highlights": "Recent Highlights",
+    "open_sidebar": "Open Full Sidebar",
+    "keyboard_shortcuts": "Press <kbd>Alt+H</kbd> to highlight, <kbd>Alt+S</kbd> to open sidebar"
+  },
+  "sidebar": {
+    "title": "Highlights",
+    "count": "{{count}} of {{total}} highlights",
+    "search_placeholder": "Search highlights...",
+    "sort_by": "Sort by:",
+    "sort_date": "Date (newest first)",
+    "sort_page": "Page",
+    "sort_tag": "Tag",
+    "clear_all_data": "Clear All",
+    "clear_all_confirm": "Are you sure you want to delete ALL highlights? This action cannot be undone.",
+    "clear_all_double_confirm": "This will permanently delete all highlights and tags. Are you absolutely sure?"
+  },
+  "tips": {
+    "quick_tips": "Quick Tips:",
+    "organize_with_tags": "Use tags to organize highlights across different pages",
+    "filter_tags": "Tags can be filtered later in the sidebar",
+    "separate_tags": "Separate multiple tags with spaces or commas"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "storage_quota": "Storage quota exceeded. Please delete some highlights.",
+    "import_failed": "Failed to import highlights. Please check the file format.",
+    "export_failed": "Failed to export highlights. Please try again."
+  }
+}

@@ -1,0 +1,77 @@
+/**
+ * Type definitions for Image Capture functionality
+ * Defines data structures for captured images, tags, and storage
+ * This is completely independent from the highlight system
+ */
+
+/**
+ * Core image capture object stored in Chrome Storage
+ */
+export interface ImageCapture {
+  id: string;
+  imageData: string;          // Base64 encoded JPEG (85% quality)
+  url: string;                 // Source webpage URL
+  tags: string[];              // Independent tag system (not shared with highlights)
+  note: string;                // User-provided note/description
+  createdAt: number;           // Unix timestamp
+  // New optional fields — backward-compatible
+  title?: string;              // User-defined title for this capture
+  linkedIds?: string[];        // IDs of linked highlights or captures
+}
+
+/**
+ * Tag object with metadata for image captures
+ * Completely independent from highlight tags
+ */
+export interface ImageTag {
+  name: string;
+  color: string;
+  captureCount: number;       // Number of captures using this tag
+  createdAt: number;           // Unix timestamp
+}
+
+/**
+ * Complete storage schema for image captures
+ * Uses separate storage keys from highlights
+ */
+export interface ImageStorageData {
+  captures: Record<string, ImageCapture>;
+  tags: Record<string, ImageTag>;
+}
+
+/**
+ * Rectangle coordinates for screenshot selection
+ */
+export interface SelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Screenshot capture request message
+ */
+export interface CaptureScreenshotMessage {
+  action: 'capture-screenshot';
+  rect: SelectionRect;
+  tabId: number;
+}
+
+/**
+ * Screenshot capture response message
+ */
+export interface CaptureScreenshotResponse {
+  success: boolean;
+  dataUrl?: string;
+  error?: string;
+}
+
+/**
+ * Storage stats for image captures
+ */
+export interface ImageStorageStats {
+  totalCaptures: number;
+  totalSize: number;          // Total size in bytes
+  totalTags: number;
+}
