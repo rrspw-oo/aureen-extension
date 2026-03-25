@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "Surligneur de Texte",
+    "description": "Organisez vos surlignages avec des balises et des traductions"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "export": "Exporter",
+    "import": "Importer",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "close": "Fermer",
+    "copy": "Copier"
+  },
+  "highlight": {
+    "create": "Créer un surlignage",
+    "selected_text": "Texte sélectionné",
+    "color": "Couleur du surlignage",
+    "save_highlight": "Enregistrer le surlignage",
+    "saving": "Enregistrement...",
+    "delete_confirm": "Êtes-vous sûr de vouloir supprimer ce surlignage ?",
+    "no_highlights": "Aucun surlignage trouvé",
+    "no_highlights_message": "Sélectionnez du texte sur n'importe quelle page Web pour créer des surlignages"
+  },
+  "tags": {
+    "label": "Balises (hashtags)",
+    "placeholder": "Ajouter des balises (séparées par des espaces ou des virgules)",
+    "filter_by_tags": "Filtrer par balises",
+    "clear_all": "Tout effacer",
+    "select_all": "Tout sélectionner",
+    "no_tags": "Aucune balise pour le moment",
+    "max_tags": "Maximum de {{max}} balises atteint"
+  },
+  "translation": {
+    "title": "Traduction",
+    "original_text": "Texte original",
+    "traditional_chinese": "Chinois traditionnel (繁體中文)",
+    "french": "Français",
+    "copy_to_clipboard": "Copié dans le presse-papiers !",
+    "translation_failed": "La traduction a échoué. Veuillez réessayer."
+  },
+  "popup": {
+    "highlights_count": "Surlignages",
+    "tags_count": "Balises",
+    "storage_used": "Stockage",
+    "recent_highlights": "Surlignages récents",
+    "open_sidebar": "Ouvrir la barre latérale complète",
+    "keyboard_shortcuts": "Appuyez sur <kbd>Alt+H</kbd> pour surligner, <kbd>Alt+S</kbd> pour ouvrir la barre latérale"
+  },
+  "sidebar": {
+    "title": "Surlignages",
+    "count": "{{count}} sur {{total}} surlignages",
+    "search_placeholder": "Rechercher des surlignages...",
+    "sort_by": "Trier par :",
+    "sort_date": "Date (le plus récent en premier)",
+    "sort_page": "Page",
+    "sort_tag": "Balise",
+    "clear_all_data": "Tout effacer",
+    "clear_all_confirm": "Êtes-vous sûr de vouloir supprimer TOUS les surlignages ? Cette action ne peut pas être annulée.",
+    "clear_all_double_confirm": "Cela supprimera définitivement tous les surlignages et balises. Êtes-vous absolument sûr ?"
+  },
+  "tips": {
+    "quick_tips": "Conseils rapides :",
+    "organize_with_tags": "Utilisez des balises pour organiser les surlignages sur différentes pages",
+    "filter_tags": "Les balises peuvent être filtrées plus tard dans la barre latérale",
+    "separate_tags": "Séparez plusieurs balises avec des espaces ou des virgules"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "storage_quota": "Quota de stockage dépassé. Veuillez supprimer certains surlignages.",
+    "import_failed": "Échec de l'importation des surlignages. Veuillez vérifier le format du fichier.",
+    "export_failed": "Échec de l'exportation des surlignages. Veuillez réessayer."
+  }
+}

@@ -314,16 +314,23 @@ const SidebarApp: React.FC = () => {
       <div style={{
         padding: '0 12px', height: '48px', backgroundColor: '#DDDDEF',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+        position: 'relative',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#C9A86C', display: 'inline-block' }} />
           <span style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', letterSpacing: '0.01em' }}>Aureen</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <HeaderIconButton title="Minimize" onClick={() => hideSidebarShadow(true)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <line x1="3" y1="8" x2="13" y2="8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </HeaderIconButton>
+
+          <HeaderIconButton title="Close" onClick={() => hideSidebarShadow(false)}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M12 4L4 12M4 4l8 8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </HeaderIconButton>
 
@@ -334,31 +341,25 @@ const SidebarApp: React.FC = () => {
               <circle cx="8" cy="13" r="1.5" fill="#4b5563"/>
             </svg>
           </HeaderIconButton>
-
-          {menuOpen && (
-            <div
-              style={{
-                position: 'absolute', top: '36px', right: 0,
-                background: 'white', border: '1px solid #E2E0EE',
-                borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                minWidth: '160px', zIndex: 10, overflow: 'hidden',
-              }}
-              onMouseLeave={() => setMenuOpen(false)}
-            >
-              <MenuAction label="Export JSON" onClick={() => { setMenuOpen(false); handleExport(); }} />
-              <MenuAction label="Export by Page" onClick={() => { setMenuOpen(false); handleExportMarkdown('url'); }} />
-              <MenuAction label="Export by Tag" onClick={() => { setMenuOpen(false); handleExportMarkdown('tag'); }} />
-              <div style={{ height: '1px', background: '#E2E0EE', margin: '4px 0' }} />
-              <MenuAction label="Clear All" onClick={() => { setMenuOpen(false); handleClearAll(); }} danger />
-            </div>
-          )}
-
-          <HeaderIconButton title="Close" onClick={() => hideSidebarShadow(false)}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4l8 8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </HeaderIconButton>
         </div>
+
+        {menuOpen && (
+          <div
+            style={{
+              position: 'absolute', top: '48px', right: '12px',
+              background: 'white', border: '1px solid #E2E0EE',
+              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              minWidth: '160px', zIndex: 100, overflow: 'hidden',
+            }}
+            onMouseLeave={() => setMenuOpen(false)}
+          >
+            <MenuAction label="Export JSON" onClick={() => { setMenuOpen(false); handleExport(); }} />
+            <MenuAction label="Export by Page" onClick={() => { setMenuOpen(false); handleExportMarkdown('url'); }} />
+            <MenuAction label="Export by Tag" onClick={() => { setMenuOpen(false); handleExportMarkdown('tag'); }} />
+            <div style={{ height: '1px', background: '#E2E0EE', margin: '4px 0' }} />
+            <MenuAction label="Clear All" onClick={() => { setMenuOpen(false); handleClearAll(); }} danger />
+          </div>
+        )}
       </div>
 
       <div style={{ flex: 1, overflow: 'hidden', background: '#F5F4FA' }}>

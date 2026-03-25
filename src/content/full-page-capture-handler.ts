@@ -1,7 +1,6 @@
 import { mountSidebarWithShadow } from './sidebar-shadow';
 
-interface Segment {
-  dataUrl: string;
+interface SegmentRef {
   scrollY: number;
 }
 
@@ -32,64 +31,21 @@ function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function captureSegment(): Promise<string> {
-  const response = await chrome.runtime.sendMessage({ action: 'capture-screenshot' });
+async function captureAndStore(sessionId: string): Promise<void> {
+  const response = await chrome.runtime.sendMessage({
+    action: 'capture-screenshot',
+    sessionId
+  });
   if (!response || response.success !== true) {
     throw new Error(response?.error ?? 'captureVisibleTab failed');
   }
-  return response.dataUrl as string;
-}
-
-async function stitchSegments(
-  segments: Segment[],
-  viewportWidth: number,
-  viewportHeight: number,
-  totalHeight: number,
-  dpr: number
-): Promise<string> {
-  const canvas = document.createElement('canvas');
-  canvas.width  = viewportWidth  * dpr;
-  canvas.height = totalHeight    * dpr;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D context unavailable');
-
-  ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, viewportWidth, totalHeight);
-
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    await new Promise<void>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const isClamped = seg.scrollY > 0 && seg.scrollY + viewportHeight > totalHeight;
-        if (!isClamped) {
-          ctx.drawImage(img, 0, seg.scrollY);
-        } else {
-          const lastVisibleHeight = totalHeight - seg.scrollY;
-          const srcY = (viewportHeight - lastVisibleHeight) * dpr;
-          const srcH = lastVisibleHeight * dpr;
-          ctx.drawImage(
-            img,
-            0, srcY, viewportWidth * dpr, srcH,
-            0, seg.scrollY, viewportWidth, lastVisibleHeight
-          );
-        }
-        resolve();
-      };
-      img.onerror = () => reject(new Error(`Failed to load segment ${i}`));
-      img.src = seg.dataUrl;
-    });
-  }
-
-  return canvas.toDataURL('image/jpeg', 0.85);
 }
 
 export async function startFullPageCapture(): Promise<void> {
   const originalScrollX = window.scrollX;
   const originalScrollY = window.scrollY;
   const saved = new Map<HTMLElement, string>();
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
   try {
     const fixedSaved = hideFixedElements();
@@ -104,7 +60,7 @@ export async function startFullPageCapture(): Promise<void> {
     const viewportWidth  = window.innerWidth;
     const dpr            = window.devicePixelRatio || 1;
 
-    const segments: Segment[] = [];
+    const segmentRefs: SegmentRef[] = [];
     let y = 0;
 
     while (y < totalHeight) {
@@ -112,15 +68,29 @@ export async function startFullPageCapture(): Promise<void> {
       await waitFrame();
       await wait(600);
       const actualScrollY = window.scrollY;
-      const dataUrl = await captureSegment();
-      segments.push({ dataUrl, scrollY: actualScrollY });
-      if (actualScrollY === segments[segments.length - 2]?.scrollY) {
+      await captureAndStore(sessionId);
+      segmentRefs.push({ scrollY: actualScrollY });
+      if (actualScrollY === segmentRefs[segmentRefs.length - 2]?.scrollY) {
         break;
       }
       y += viewportHeight;
     }
 
-    const finalDataUrl = await stitchSegments(segments, viewportWidth, viewportHeight, totalHeight, dpr);
+    const stitchResponse = await chrome.runtime.sendMessage({
+      action: 'stitch-segments',
+      sessionId,
+      segmentRefs,
+      viewportWidth,
+      viewportHeight,
+      totalHeight,
+      dpr
+    });
+
+    if (!stitchResponse || stitchResponse.success !== true) {
+      throw new Error(stitchResponse?.error ?? 'Stitch failed in service worker');
+    }
+
+    const finalDataUrl = stitchResponse.dataUrl as string;
 
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     mountSidebarWithShadow({
