@@ -4,7 +4,6 @@ import styles from '@/index.css?inline';
 import { registerFabFns, hideFab } from './fab-bridge';
 import { startScreenshotCapture } from './screenshot-capture-handler';
 import { startFullPageCapture } from './full-page-capture-handler';
-import { mountSidebarWithShadow } from './sidebar-shadow';
 
 let fabHost: HTMLDivElement | null = null;
 let fabReactRoot: ReturnType<typeof createRoot> | null = null;
@@ -46,7 +45,7 @@ function unmountFab(): void {
 
 registerFabFns(mountFab, unmountFab);
 
-const PRIMARY = '#DDDDEF';
+const PRIMARY = '#7C6EAF';
 const ACCENT = '#C9A86C';
 
 const FabButton: React.FC = () => {
@@ -54,7 +53,7 @@ const FabButton: React.FC = () => {
 
   const handleExpandSidebar = (): void => {
     hideFab();
-    mountSidebarWithShadow();
+    import('./sidebar-shadow').then(m => m.mountSidebarWithShadow());
   };
 
   const handleScreenshot = (): void => {
@@ -121,14 +120,14 @@ const FabButton: React.FC = () => {
           width: '56px', height: '56px', borderRadius: '50%',
           background: PRIMARY, border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(180,180,210,0.5)',
+          boxShadow: '0 4px 16px rgba(124,110,175,0.4)',
           transition: 'transform 0.15s ease',
         }}
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
       >
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <circle cx="14" cy="14" r="5" fill="#4a4870"/>
+          <circle cx="14" cy="14" r="5" fill="white"/>
           {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg, i) => (
             <line
               key={i}
@@ -136,7 +135,7 @@ const FabButton: React.FC = () => {
               y1={14 + 7 * Math.sin((deg * Math.PI) / 180)}
               x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
               y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
-              stroke="#4a4870" strokeWidth="1.5" strokeLinecap="round"
+              stroke="white" strokeWidth="1.5" strokeLinecap="round"
             />
           ))}
         </svg>
