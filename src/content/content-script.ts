@@ -194,12 +194,12 @@ function showToolbar(): void {
     toolbarJustCreated = false;
   }, 300); // 300ms 保護期
 
-  // Snapshot selection now — by click time the live selection may be gone
-  const capturedSelection = currentSelection;
+  // Snapshot the range now — Selection is a live object that gets cleared on click
+  const capturedRange = currentSelection.rangeCount > 0 ? currentSelection.getRangeAt(0).cloneRange() : null;
   const capturedText = currentSelectionText;
 
   // Add event listeners to buttons
-  const highlightBtn = document.getElementById('highlight-btn');
+  const highlightBtn = toolbarElement.querySelector<HTMLButtonElement>('#highlight-btn');
 
   // Add hover effects
   if (highlightBtn) {
@@ -214,8 +214,14 @@ function showToolbar(): void {
     highlightBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!capturedSelection || !capturedText) return;
-      const tempHighlight = highlighter.createHighlight(capturedSelection, 'yellow', []);
+      if (!capturedRange || !capturedText) return;
+      // Restore the cloned range into the live selection so createHighlight can read it
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(capturedRange);
+      }
+      const tempHighlight = highlighter.createHighlight(sel!, 'yellow', []);
       if (tempHighlight) {
         toggleSidebar({
           mode: 'highlight',
@@ -229,8 +235,8 @@ function showToolbar(): void {
       }
       hideToolbar();
       setTimeout(() => {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+        const s = window.getSelection();
+        if (s && s.rangeCount > 0) s.removeAllRanges();
       }, 100);
     });
   }
