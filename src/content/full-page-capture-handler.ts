@@ -97,6 +97,7 @@ export async function startFullPageCapture(): Promise<void> {
 
     window.scrollTo(0, 0);
     await waitFrame();
+    await wait(150);
 
     const totalHeight    = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
     const viewportHeight = window.innerHeight;
@@ -121,7 +122,7 @@ export async function startFullPageCapture(): Promise<void> {
 
     const finalDataUrl = await stitchSegments(segments, viewportWidth, viewportHeight, totalHeight, dpr);
 
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     mountSidebarWithShadow({
       mode: 'capture',
       captureId: tempId,
