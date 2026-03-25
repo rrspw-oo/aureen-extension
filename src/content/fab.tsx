@@ -45,7 +45,7 @@ function unmountFab(): void {
 
 registerFabFns(mountFab, unmountFab);
 
-const PRIMARY = '#7C6EAF';
+const PRIMARY = '#9B8FCC';
 const ACCENT = '#C9A86C';
 
 const FabButton: React.FC = () => {
@@ -120,7 +120,7 @@ const FabButton: React.FC = () => {
           width: '56px', height: '56px', borderRadius: '50%',
           background: PRIMARY, border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(124,110,175,0.4)',
+          boxShadow: '0 4px 16px rgba(155,143,204,0.4)',
           transition: 'transform 0.15s ease',
         }}
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
