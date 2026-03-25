@@ -1,0 +1,88 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node modules
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env
+.env.*
+!.env.example
+*.env
+
+# Secrets and keys
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+
+# API keys and tokens
+**/config/secrets.json
+**/config/credentials.json
+credentials.json
+secrets.json
+api-keys.json
+
+# Build output
+dist/
+build/
+*.zip
+
+# Chrome extension package
+*.crx
+*.pem
+
+# Security
+*.key
+*.secret
+.npmrc
+.yarnrc
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# License (not uploaded to GitHub)
+LICENSE
+
+# Markdown files (except README.md and PRIVACY_POLICY.md)
+*.md
+!README.md
+!PRIVACY_POLICY.md
+
+# Brainstorm sessions

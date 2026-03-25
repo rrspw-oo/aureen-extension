@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "文字標記工具",
+    "description": "使用標籤和翻譯來整理你的標記"
+  },
+  "common": {
+    "save": "儲存",
+    "cancel": "取消",
+    "delete": "刪除",
+    "edit": "編輯",
+    "export": "匯出",
+    "import": "匯入",
+    "search": "搜尋",
+    "loading": "載入中...",
+    "close": "關閉",
+    "copy": "複製"
+  },
+  "highlight": {
+    "create": "建立標記",
+    "selected_text": "選取的文字",
+    "color": "標記顏色",
+    "save_highlight": "儲存標記",
+    "saving": "儲存中...",
+    "delete_confirm": "確定要刪除此標記嗎？",
+    "no_highlights": "找不到標記",
+    "no_highlights_message": "在任何網頁上選取文字以建立標記"
+  },
+  "tags": {
+    "label": "標籤",
+    "placeholder": "新增標籤（以空格或逗號分隔）",
+    "filter_by_tags": "依標籤篩選",
+    "clear_all": "全部清除",
+    "select_all": "全選",
+    "no_tags": "尚無標籤",
+    "max_tags": "已達到最多 {{max}} 個標籤"
+  },
+  "translation": {
+    "title": "翻譯",
+    "original_text": "原始文字",
+    "traditional_chinese": "繁體中文",
+    "french": "法文 (Français)",
+    "copy_to_clipboard": "已複製到剪貼簿！",
+    "translation_failed": "翻譯失敗。請重試。"
+  },
+  "popup": {
+    "highlights_count": "標記",
+    "tags_count": "標籤",
+    "storage_used": "儲存空間",
+    "recent_highlights": "最近的標記",
+    "open_sidebar": "開啟完整側邊欄",
+    "keyboard_shortcuts": "按 <kbd>Alt+H</kbd> 來標記，<kbd>Alt+S</kbd> 開啟側邊欄"
+  },
+  "sidebar": {
+    "title": "標記",
+    "count": "{{count}} / {{total}} 個標記",
+    "search_placeholder": "搜尋標記...",
+    "sort_by": "排序方式：",
+    "sort_date": "日期（最新優先）",
+    "sort_page": "頁面",
+    "sort_tag": "標籤",
+    "clear_all_data": "全部清除",
+    "clear_all_confirm": "確定要刪除所有標記嗎？此操作無法復原。",
+    "clear_all_double_confirm": "這將永久刪除所有標記和標籤。確定要繼續嗎？"
+  },
+  "tips": {
+    "quick_tips": "快速提示：",
+    "organize_with_tags": "使用標籤在不同頁面之間整理標記",
+    "filter_tags": "稍後可以在側邊欄中篩選標籤",
+    "separate_tags": "用空格或逗號分隔多個標籤"
+  },
+  "errors": {
+    "generic": "發生錯誤。請重試。",
+    "storage_quota": "儲存空間已滿。請刪除一些標記。",
+    "import_failed": "匯入標記失敗。請檢查檔案格式。",
+    "export_failed": "匯出標記失敗。請重試。"
+  }
+}
