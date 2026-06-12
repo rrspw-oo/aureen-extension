@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Aureen - text highlights and region screenshots",
   "version": "1.0.0",
-  "description": "with tag-based management and export capabilities",
+  "description": "Highlight text and capture region screenshots on any webpage. Organize with tags and export to Markdown or JSON.",
   "icons": {
     "16": "icon-16.png",
     "48": "icon-48.png",
@@ -19,7 +19,6 @@
   "permissions": [
     "storage",
     "activeTab",
-    "tabs",
     "scripting"
   ],
   "host_permissions": [
@@ -34,20 +33,6 @@
       "matches": ["<all_urls>"],
       "js": ["src/content/content-script.ts"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "assets/*",
-        "assets/*.js",
-        "assets/*.css",
-        "chunks/*",
-        "icons/*",
-        "*.css",
-        "*.js"
-      ],
-      "matches": ["<all_urls>"]
     }
   ],
   "commands": {

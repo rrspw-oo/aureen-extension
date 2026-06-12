@@ -10,7 +10,7 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: true,
+    sourcemap: false,
     outDir: 'dist',
     emptyOutDir: false,
     rollupOptions: {
