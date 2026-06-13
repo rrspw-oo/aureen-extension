@@ -59,6 +59,26 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
             className="absolute inset-0 w-full h-full object-cover"
           />
 
+          {capture.ocrStatus && capture.ocrStatus !== 'done' && (
+            <span
+              className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                capture.ocrStatus === 'failed'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-black bg-opacity-60 text-white'
+              }`}
+            >
+              {capture.ocrStatus === 'failed' ? 'OCR failed' : 'OCR...'}
+            </span>
+          )}
+          {capture.ocrStatus === 'done' && capture.ocrText && (
+            <span
+              className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-600 text-white"
+              title={capture.ocrText.slice(0, 200)}
+            >
+              text
+            </span>
+          )}
+
           {/* Action buttons overlay */}
           {showActions && (
             <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center gap-2">

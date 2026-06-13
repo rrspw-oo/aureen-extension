@@ -17,6 +17,24 @@ export interface ImageCapture {
   // New optional fields — backward-compatible
   title?: string;              // User-defined title for this capture
   linkedIds?: string[];        // IDs of linked highlights or captures
+  ocrText?: string;
+  ocrStatus?: OcrStatus;
+  ocrLang?: string;
+  ocrWords?: OcrWord[];
+}
+
+export type OcrStatus = 'pending' | 'processing' | 'done' | 'failed';
+
+export interface OcrWord {
+  text: string;
+  bbox: { x0: number; y0: number; x1: number; y1: number };
+  confidence: number;
+}
+
+export interface OcrResult {
+  text: string;
+  words: OcrWord[];
+  lang: string;
 }
 
 /**

@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { imageCaptureStorage } from '@/services/image-capture-storage';
+import { runOcrForCapture } from '@/services/ocr';
+import { exportTagAsPdf, exportAllCapturesAsPdf } from '@/services/pdf-export';
 import { formatBytes } from '@/services/screenshot';
 import type { ImageCapture, ImageTag } from '@/types/image-capture';
 import { ImageCaptureCard } from './ImageCaptureCard';
@@ -40,6 +42,10 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
 
   // Sub-tab state
   const [subTab, setSubTab] = useState<'new' | 'saved'>('saved');
+
+  // Export state
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -138,10 +144,13 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
         note: editNote.trim(),
         title: editTitle.trim() || undefined,
         linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
-        createdAt: initialData.timestamp as number
+        createdAt: initialData.timestamp as number,
+        ocrStatus: 'pending' as const
       };
 
       await imageCaptureStorage.saveCapture(capture);
+
+      void runOcrForCapture(capture.id, capture.imageData);
 
       setIsEditingCapture(false);
       setEditTags('');
@@ -168,6 +177,27 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
     setLinkedIds([]);
     setLinkedSearch('');
     setShowLinkedPicker(false);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    setExportMessage(null);
+    try {
+      let count = 0;
+      if (selectedTags.length > 0) {
+        for (const tag of selectedTags) {
+          count += await exportTagAsPdf(tag);
+        }
+      } else {
+        count = await exportAllCapturesAsPdf();
+      }
+      setExportMessage(`Exported ${count} capture(s) as PDF + Markdown.`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportMessage(error instanceof Error ? error.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const startScreenshot = (): void => {
@@ -519,6 +549,30 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                   selectedTags={selectedTags}
                   onTagsChange={handleTagFilterChange}
                 />
+              </div>
+            )}
+
+            {/* Export */}
+            {captures.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+                >
+                  {exporting
+                    ? 'Exporting...'
+                    : selectedTags.length > 0
+                      ? `Export #${selectedTags.join(' #')} as PDF + Markdown`
+                      : 'Export all as PDF + Markdown'}
+                </button>
+                <p className="mt-2 text-xs text-gray-500">
+                  PDF keeps the original page layout. Markdown contains OCR text for NotebookLM.
+                </p>
+                {exportMessage && (
+                  <p className="mt-2 text-xs text-gray-700">{exportMessage}</p>
+                )}
               </div>
             )}
 

@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { storageService } from '@/services/storage';
 import { imageCaptureStorage } from '@/services/image-capture-storage';
+import { runOcrForCapture } from '@/services/ocr';
 import { HighlightList } from './HighlightList';
 import { Button } from '@/components/Button';
 import { COLORS } from '@/constants/theme';
@@ -186,11 +187,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
           note: noteInputValue.trim(),
           title: titleInputValue.trim() || undefined,
           linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
-          createdAt: activeAction.timestamp || Date.now()
+          createdAt: activeAction.timestamp || Date.now(),
+          ocrStatus: 'pending'
         };
 
         await imageCaptureStorage.saveCapture(capture);
         showSuccessMessage('Screenshot saved!');
+
+        void runOcrForCapture(capture.id, capture.imageData);
       } else {
         // Save highlight
         if (!activeAction.text) return;
