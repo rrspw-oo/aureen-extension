@@ -316,7 +316,7 @@ export function injectHighlightStyles(): void {
 
     mark.highlight-mark:hover {
       opacity: 0.8;
-      border-color: #DDDDEF;
+      border-color: #C9A86C;
     }
 
     mark.highlight-mark.animate-pulse {

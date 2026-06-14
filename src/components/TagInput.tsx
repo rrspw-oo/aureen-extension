@@ -98,18 +98,18 @@ export const TagInput: React.FC<TagInputProps> = ({
         Tags (hashtags)
       </label>
 
-      <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500">
+      <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-[#C9A86C] focus-within:border-[#C9A86C]">
         {tags.map((tag, index) => (
           <span
             key={index}
-            className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-medium"
+            className="inline-flex items-center gap-1 px-3 py-1 bg-[#F4ECDD] text-[#7E6332] rounded-full text-sm font-medium"
           >
             #{tag}
             <button
               type="button"
               onClick={() => removeTag(index)}
               disabled={disabled}
-              className="hover:bg-emerald-200 rounded-full p-1 transition-colors"
+              className="hover:bg-[#E8DCC2] rounded-full p-1 transition-colors"
               aria-label={`Remove tag ${tag}`}
             >
               <svg
@@ -149,7 +149,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               key={suggestion.name}
               type="button"
               onClick={() => selectSuggestion(suggestion.name)}
-              className="w-full px-4 py-2 text-left hover:bg-emerald-50 transition-colors flex items-center justify-between"
+              className="w-full px-4 py-2 text-left hover:bg-[#FAF4E9] transition-colors flex items-center justify-between"
             >
               <span className="text-sm font-medium text-gray-900">
                 #{suggestion.name}

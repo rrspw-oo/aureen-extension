@@ -68,7 +68,9 @@ async function stitchSegmentsInWorker(
     bitmap.close();
   }
 
-  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  // Full-page captures can be extremely tall, so keep them as JPEG (PNG would
+  // blow the storage quota) but use a high quality to reduce text fogging.
+  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.95 });
   return blobToDataUrl(blob);
 }
 
@@ -76,7 +78,7 @@ async function cropAndCompressInWorker(
   fullDataUrl: string,
   rect: SelectionRect,
   dpr: number,
-  quality: number
+  _quality: number
 ): Promise<string> {
   const blob = dataUrlToBlob(fullDataUrl);
   const actualX = Math.round(rect.x * dpr);
@@ -89,7 +91,10 @@ async function cropAndCompressInWorker(
   if (!ctx) throw new Error('OffscreenCanvas 2D context unavailable');
   ctx.drawImage(cropped, 0, 0);
   cropped.close();
-  const resultBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+  // Region captures are bounded by the selection, so store them as lossless
+  // PNG — JPEG ringing is what made screenshot text look foggy. (_quality is
+  // kept in the signature for backward compatibility but no longer used.)
+  const resultBlob = await canvas.convertToBlob({ type: 'image/png' });
   return blobToDataUrl(resultBlob);
 }
 
@@ -104,11 +109,6 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await storageService.saveSettings({
       defaultColor: 'yellow',
       interfaceLanguage: 'en'
-    });
-
-    // Open welcome page or options page
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('popup.html')
     });
   } else if (details.reason === 'update') {
     // Extension updated
@@ -169,6 +169,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             } catch { /* ignore */ }
           }
           sendResponse({ success: true });
+          break;
+        }
+
+        case 'start-screenshot-in-tab': {
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          const targetTab = tabs[0];
+          if (!targetTab?.id) { sendResponse({ success: false }); break; }
+          const tabId = targetTab.id;
+          const ready = await ensureContentScript(tabId);
+          if (ready) {
+            try {
+              await chrome.tabs.sendMessage(tabId, { action: 'start-screenshot' });
+            } catch { /* ignore */ }
+          }
+          sendResponse({ success: ready });
           break;
         }
 
@@ -336,19 +351,34 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
   if (!tab?.id) {
     return;
   }
+  const tabId = tab.id;
+  const ready = await ensureContentScript(tabId);
+  if (!ready) {
+    return; // restricted page (chrome://, web store, etc.)
+  }
 
   switch (command) {
     case 'toggle-highlight':
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'toggle-highlight-mode'
-      });
+      chrome.tabs
+        .sendMessage(tabId, { action: 'toggle-highlight-mode' })
+        .catch(() => {});
       break;
 
     case 'open-sidebar':
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'open-sidebar'
-      });
+      chrome.tabs.sendMessage(tabId, { action: 'open-sidebar' }).catch(() => {});
       break;
   }
+});
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab.id) {
+    return;
+  }
+  const tabId = tab.id;
+  const ready = await ensureContentScript(tabId);
+  if (!ready) {
+    return;
+  }
+  chrome.tabs.sendMessage(tabId, { action: 'show-fab' }).catch(() => {});
 });
 

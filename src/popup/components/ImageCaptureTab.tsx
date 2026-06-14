@@ -6,10 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { imageCaptureStorage } from '@/services/image-capture-storage';
 import { runOcrForCapture } from '@/services/ocr';
-import { exportTagAsPdf, exportAllCapturesAsPdf } from '@/services/pdf-export';
 import { formatBytes } from '@/services/screenshot';
 import type { ImageCapture, ImageTag } from '@/types/image-capture';
 import { ImageCaptureCard } from './ImageCaptureCard';
+import { ExportHandbookDialog } from './ExportHandbookDialog';
 import { ImageTagFilter } from './ImageTagFilter';
 import { Button } from '@/components/Button';
 import { COLORS } from '@/constants/theme';
@@ -44,8 +44,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
   const [subTab, setSubTab] = useState<'new' | 'saved'>('saved');
 
   // Export state
-  const [exporting, setExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -179,27 +178,6 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
     setShowLinkedPicker(false);
   };
 
-  const handleExport = async () => {
-    setExporting(true);
-    setExportMessage(null);
-    try {
-      let count = 0;
-      if (selectedTags.length > 0) {
-        for (const tag of selectedTags) {
-          count += await exportTagAsPdf(tag);
-        }
-      } else {
-        count = await exportAllCapturesAsPdf();
-      }
-      setExportMessage(`Exported ${count} capture(s) as PDF + Markdown.`);
-    } catch (error) {
-      console.error('Export failed:', error);
-      setExportMessage(error instanceof Error ? error.message : 'Export failed');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const startScreenshot = (): void => {
     // Send message to content script via window.postMessage
     window.postMessage({
@@ -318,7 +296,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     placeholder="e.g. Lecture slide on recursion"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-sm"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
                   />
                 </div>
 
@@ -332,7 +310,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                     value={editTags}
                     onChange={(e) => setEditTags(e.target.value)}
                     placeholder="e.g. product, comparison, laptop"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-sm"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveCapture();
                     }}
@@ -374,7 +352,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                     onChange={(e) => setEditNote(e.target.value)}
                     placeholder="Add a note about this screenshot..."
                     rows={3}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-sm resize-none"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm resize-none"
                   />
                 </div>
 
@@ -383,12 +361,12 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                   <button
                     type="button"
                     onClick={() => setShowLinkedPicker(v => !v)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-indigo-600 transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-[#9A7B43] transition-colors"
                   >
                     <span>{showLinkedPicker ? '▾' : '▸'}</span>
                     Link to existing items
                     {linkedIds.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+                      <span className="ml-1 px-1.5 py-0.5 bg-[#F4ECDD] text-[#9A7B43] rounded-full text-xs font-bold">
                         {linkedIds.length}
                       </span>
                     )}
@@ -402,7 +380,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                           value={linkedSearch}
                           onChange={(e) => setLinkedSearch(e.target.value)}
                           placeholder="Search highlights or captures..."
-                          className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#E0CFA0]"
                         />
                       </div>
                       <div className="max-h-48 overflow-y-auto">
@@ -422,7 +400,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                                 className="mt-0.5 flex-shrink-0"
                               />
                               <div className="min-w-0">
-                                <p className="text-xs font-medium text-indigo-700 truncate">
+                                <p className="text-xs font-medium text-[#9A7B43] truncate">
                                   {h.title || h.text.slice(0, 40)}
                                 </p>
                                 {h.tags.length > 0 && <p className="text-xs text-gray-400">{h.tags.slice(0,3).join(', ')}</p>}
@@ -448,7 +426,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                               <div className="flex items-center gap-2 min-w-0">
                                 <img src={c.imageData} alt="" className="w-8 h-6 object-cover rounded flex-shrink-0" />
                                 <div className="min-w-0">
-                                  <p className="text-xs font-medium text-green-700 truncate">{c.title || 'Screenshot'}</p>
+                                  <p className="text-xs font-medium text-[#9A7B43] truncate">{c.title || 'Screenshot'}</p>
                                   {c.tags.length > 0 && <p className="text-xs text-gray-400">{c.tags.slice(0,3).join(', ')}</p>}
                                 </div>
                               </div>
@@ -557,22 +535,16 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
               <div className="px-6 py-4 border-t border-gray-200">
                 <button
                   type="button"
-                  onClick={handleExport}
-                  disabled={exporting}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+                  onClick={() => setShowExportDialog(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-[#C9A86C] text-[#2C2417] text-sm font-medium hover:bg-[#B8975B]"
                 >
-                  {exporting
-                    ? 'Exporting...'
-                    : selectedTags.length > 0
-                      ? `Export #${selectedTags.join(' #')} as PDF + Markdown`
-                      : 'Export all as PDF + Markdown'}
+                  {selectedTags.length > 0
+                    ? `Export #${selectedTags[0]} Handbook`
+                    : 'Export Handbook'}
                 </button>
                 <p className="mt-2 text-xs text-gray-500">
-                  PDF keeps the original page layout. Markdown contains OCR text for NotebookLM.
+                  A polished PDF laid out by title, tag and notes. Choose whether to include the original image.
                 </p>
-                {exportMessage && (
-                  <p className="mt-2 text-xs text-gray-700">{exportMessage}</p>
-                )}
               </div>
             )}
 
@@ -613,6 +585,13 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
           </>
         )}
       </div>
+
+      {showExportDialog && (
+        <ExportHandbookDialog
+          tag={selectedTags.length > 0 ? selectedTags[0] : undefined}
+          onClose={() => setShowExportDialog(false)}
+        />
+      )}
     </div>
   );
 };

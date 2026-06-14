@@ -32,19 +32,19 @@ export default {
         ]
       },
       colors: {
-        // Primary colors - Emerald green tones
+        // Primary colors - Aureen champagne gold
         'primary': {
-          light: '#10b981',
-          DEFAULT: '#059669',
-          dark: '#047857'
+          light: '#D8BC85',
+          DEFAULT: '#C9A86C',
+          dark: '#A9863F'
         },
-        // Secondary colors - Amber tones
+        // Secondary colors - deeper bronze gold
         'secondary': {
-          light: '#f59e0b',
-          DEFAULT: '#d97706'
+          light: '#C9A86C',
+          DEFAULT: '#A9863F'
         },
         // Highlight colors - Must be in safelist for dynamic usage
-        'highlight-yellow': '#DDDDEF',
+        'highlight-yellow': '#F3E7C9',
         'highlight-mint': '#d1fae5',
         'highlight-coral': '#fed7d7',
         'highlight-peach': '#fde68a',

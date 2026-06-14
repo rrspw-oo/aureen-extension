@@ -9,7 +9,7 @@
  */
 export interface ImageCapture {
   id: string;
-  imageData: string;          // Base64 encoded JPEG (85% quality)
+  imageData: string;          // Base64 data URL — PNG for region captures (crisp text), JPEG q95 for full-page
   url: string;                 // Source webpage URL
   tags: string[];              // Independent tag system (not shared with highlights)
   note: string;                // User-provided note/description

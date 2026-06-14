@@ -61,18 +61,18 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-dark;
+    @apply bg-primary text-[#2C2417] hover:bg-primary-dark;
     @apply focus:ring-primary;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-white hover:bg-secondary;
+    @apply bg-secondary text-[#2C2417] hover:bg-secondary;
     @apply focus:ring-secondary;
   }
 
   .btn-outline {
     @apply bg-transparent border-2 border-primary text-primary;
-    @apply hover:bg-primary hover:text-white;
+    @apply hover:bg-primary hover:text-[#2C2417];
     @apply focus:ring-primary;
   }
 

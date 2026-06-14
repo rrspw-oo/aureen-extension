@@ -52,7 +52,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
           {selectedTags.length < tags.length && tags.length > 0 && (
             <button
               onClick={selectAll}
-              className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-xs text-[#A9863F] hover:text-[#9A7B43] font-medium"
             >
               Select all
             </button>
@@ -75,7 +75,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
                   inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all
                   ${
                     isSelected
-                      ? 'bg-emerald-600 text-white shadow-md'
+                      ? 'bg-[#A9863F] text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }
                 `}
@@ -84,7 +84,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
                 <span
                   className={`
                     text-xs px-2 py-0.5 rounded-full
-                    ${isSelected ? 'bg-emerald-700' : 'bg-gray-200'}
+                    ${isSelected ? 'bg-[#9A7B43]' : 'bg-gray-200'}
                   `}
                 >
                   {tag.highlightCount}

@@ -8,7 +8,25 @@ import { initContentApp } from './content-app';
 import { toggleSidebarShadow, mountSidebarWithShadow } from './sidebar-shadow';
 import { highlighter } from './highlighter';
 import { startScreenshotCapture } from './screenshot-capture-handler';
+import { showFab } from './fab-bridge';
 import type { Highlight } from '@/types';
+
+declare global {
+  interface Window {
+    __AUREEN_CONTENT_LOADED__?: boolean;
+  }
+}
+
+/**
+ * Guard against double-injection. Chrome can run the content script twice on a
+ * page: once from the manifest `content_scripts` declaration and once from the
+ * service worker's `ensureContentScript` fallback (used to re-inject after an
+ * extension reload). When both run we would otherwise get two FABs, two
+ * sidebars and duplicated listeners. The first instance wires everything up;
+ * later instances skip listener/init registration (mounts are also DOM-guarded).
+ */
+const alreadyLoaded = window.__AUREEN_CONTENT_LOADED__ === true;
+window.__AUREEN_CONTENT_LOADED__ = true;
 
 /**
  * State management for content script
@@ -161,10 +179,10 @@ function showToolbar(): void {
   toolbarElement.innerHTML = `
     <button id="highlight-btn" title="Highlight text" style="
       padding: 8px 16px;
-      background: #DDDDEF;
-      color: #333333;
+      background: #C9A86C;
+      color: #2C2417;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
       font-weight: 500;
@@ -386,6 +404,13 @@ function restoreHighlights(highlights: Highlight[]): void {
  * Message listener from background script
  */
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  // A duplicate-injected instance still keeps a (harmless) ping responder so the
+  // service worker sees the page as ready, but does not act on other messages.
+  if (alreadyLoaded) {
+    sendResponse({ success: true });
+    return true;
+  }
+
   switch (message.action) {
     case 'ping':
       sendResponse({ success: true });
@@ -401,6 +426,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case 'toggle-sidebar':
       toggleSidebar();
+      break;
+
+    case 'show-fab':
+      showFab();
       break;
 
     case 'toggle-highlight-mode':
@@ -436,10 +465,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 /**
  * Initialize on load
  */
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initialize);
-} else {
-  initialize();
+if (!alreadyLoaded) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
 }
 
 /**

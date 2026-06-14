@@ -12,6 +12,7 @@ import styles from '@/index.css?inline';
 import { showFab, hideFab } from './fab-bridge';
 import { exportImportService } from '@/services/export-import';
 import { storageService } from '@/services/storage';
+import { ExportHandbookDialog } from '@/popup/components/ExportHandbookDialog';
 
 type TabType = 'highlights' | 'images';
 
@@ -34,6 +35,14 @@ export function mountSidebarWithShadow(data?: Record<string, unknown>): void {
     hideFab();
     shadowHost.style.display = 'block';
     sendDataToSidebar();
+    return;
+  }
+
+  // Another content-script instance (double injection) may already own a sidebar.
+  const existingHost = document.getElementById('text-highlighter-sidebar-shadow');
+  if (existingHost) {
+    hideFab();
+    (existingHost as HTMLElement).style.display = 'block';
     return;
   }
 
@@ -74,9 +83,9 @@ export function mountSidebarWithShadow(data?: Record<string, unknown>): void {
   appContainer.style.cssText = `
     width: 100%;
     height: 100%;
-    background: #F5F4FA;
-    border-left: 1px solid #d1d5db;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+    background: #FBFAF7;
+    border-left: 1px solid #EBE3D3;
+    box-shadow: -4px 0 24px rgba(31, 26, 12, 0.12);
     pointer-events: auto;
   `;
   shadowRoot.appendChild(appContainer);
@@ -172,7 +181,7 @@ const MenuAction: React.FC<{ label: string; onClick: () => void; danger?: boolea
       color: danger ? '#C96A6A' : '#1F1F2E', fontFamily: 'inherit',
       transition: 'background 0.1s',
     }}
-    onMouseEnter={e => (e.currentTarget.style.background = '#F5F4FA')}
+    onMouseEnter={e => (e.currentTarget.style.background = '#F6EFE2')}
     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
   >
     {label}
@@ -184,7 +193,7 @@ const BottomTabBar: React.FC<{ activeTab: TabType; onTabChange: (tab: TabType) =
   const MUTED = '#9492A8';
 
   return (
-    <div style={{ display: 'flex', borderTop: '1px solid #E2E0EE', background: 'white', flexShrink: 0 }}>
+    <div style={{ display: 'flex', borderTop: '1px solid #EFE7D8', background: 'white', flexShrink: 0 }}>
       <button
         onClick={() => onTabChange('highlights')}
         style={{
@@ -290,6 +299,7 @@ const SidebarApp: React.FC = () => {
   }, []);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [handbookOpen, setHandbookOpen] = useState(false);
 
   const handleExport = async (): Promise<void> => {
     const data = await exportImportService.exportAll();
@@ -312,33 +322,34 @@ const SidebarApp: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
 
       <div style={{
-        padding: '0 12px', height: '48px', backgroundColor: '#DDDDEF',
+        padding: '0 12px', height: '48px', backgroundColor: '#F6EFE2',
+        borderBottom: '1px solid #ECE2CF',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
         position: 'relative',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#C9A86C', display: 'inline-block' }} />
-          <span style={{ fontSize: '16px', fontWeight: 600, color: '#1f2937', letterSpacing: '0.01em' }}>Aureen</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+          <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#C9A86C', display: 'inline-block' }} />
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#1F1F2E', letterSpacing: '0.03em' }}>Aureen</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <HeaderIconButton title="Minimize" onClick={() => hideSidebarShadow(true)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <line x1="3" y1="8" x2="13" y2="8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="3" y1="8" x2="13" y2="8" stroke="#9A8A6A" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </HeaderIconButton>
 
           <HeaderIconButton title="Close" onClick={() => hideSidebarShadow(false)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4l8 8" stroke="#4b5563" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M12 4L4 12M4 4l8 8" stroke="#9A8A6A" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </HeaderIconButton>
 
           <HeaderIconButton title="Options" onClick={() => setMenuOpen(o => !o)}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="3" r="1.5" fill="#4b5563"/>
-              <circle cx="8" cy="8" r="1.5" fill="#4b5563"/>
-              <circle cx="8" cy="13" r="1.5" fill="#4b5563"/>
+              <circle cx="8" cy="3" r="1.5" fill="#9A8A6A"/>
+              <circle cx="8" cy="8" r="1.5" fill="#9A8A6A"/>
+              <circle cx="8" cy="13" r="1.5" fill="#9A8A6A"/>
             </svg>
           </HeaderIconButton>
         </div>
@@ -347,22 +358,27 @@ const SidebarApp: React.FC = () => {
           <div
             style={{
               position: 'absolute', top: '48px', right: '12px',
-              background: 'white', border: '1px solid #E2E0EE',
+              background: 'white', border: '1px solid #EBE3D3',
               borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
               minWidth: '160px', zIndex: 100, overflow: 'hidden',
             }}
             onMouseLeave={() => setMenuOpen(false)}
           >
+            <MenuAction
+              label={activeTab === 'images' ? 'Export Handbook PDF' : 'Export Highlights PDF'}
+              onClick={() => { setMenuOpen(false); setHandbookOpen(true); }}
+            />
+            <div style={{ height: '1px', background: '#EBE3D3', margin: '4px 0' }} />
             <MenuAction label="Export JSON" onClick={() => { setMenuOpen(false); handleExport(); }} />
             <MenuAction label="Export by Page" onClick={() => { setMenuOpen(false); handleExportMarkdown('url'); }} />
             <MenuAction label="Export by Tag" onClick={() => { setMenuOpen(false); handleExportMarkdown('tag'); }} />
-            <div style={{ height: '1px', background: '#E2E0EE', margin: '4px 0' }} />
+            <div style={{ height: '1px', background: '#EBE3D3', margin: '4px 0' }} />
             <MenuAction label="Clear All" onClick={() => { setMenuOpen(false); handleClearAll(); }} danger />
           </div>
         )}
       </div>
 
-      <div style={{ flex: 1, overflow: 'hidden', background: '#F5F4FA' }}>
+      <div style={{ flex: 1, overflow: 'hidden', background: '#FBFAF7' }}>
         {activeTab === 'highlights' ? (
           <Sidebar initialData={data} />
         ) : (
@@ -371,6 +387,13 @@ const SidebarApp: React.FC = () => {
       </div>
 
       <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {handbookOpen && (
+        <ExportHandbookDialog
+          kind={activeTab === 'images' ? 'capture' : 'highlight'}
+          onClose={() => setHandbookOpen(false)}
+        />
+      )}
     </div>
   );
 };

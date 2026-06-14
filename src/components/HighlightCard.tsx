@@ -33,27 +33,27 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
 
   return (
     <div style={{
-      background: 'linear-gradient(160deg, #FAFAFE 0%, #F5F4FA 100%)',
+      background: '#ffffff',
       borderRadius: '14px',
       overflow: 'hidden',
-      boxShadow: '0 4px 24px rgba(155,143,204,0.15), 0 1px 4px rgba(0,0,0,0.06)',
-      border: '2px solid transparent',
+      boxShadow: '0 4px 20px rgba(201,168,108,0.12), 0 1px 3px rgba(31,26,12,0.05)',
+      border: '1px solid #EFE7D8',
       transition: 'box-shadow 0.2s, transform 0.15s',
     }}
       className="highlight-card"
       onMouseEnter={e => {
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(155,143,204,0.22), 0 2px 8px rgba(0,0,0,0.08)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(201,168,108,0.22), 0 2px 8px rgba(0,0,0,0.08)';
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLDivElement).style.transform = '';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 24px rgba(155,143,204,0.15), 0 1px 4px rgba(0,0,0,0.06)';
+        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 24px rgba(201,168,108,0.15), 0 1px 4px rgba(0,0,0,0.06)';
       }}
     >
       {/* Title header */}
       {highlight.title && (
-        <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #EAE9F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p style={{ fontSize: '17px', fontWeight: 700, color: COLORS.primary, lineHeight: 1.3, letterSpacing: '-0.01em', margin: 0 }}>
+        <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #F0EADD', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ fontSize: '17px', fontWeight: 700, color: COLORS.goldChipText, lineHeight: 1.3, letterSpacing: '-0.01em', margin: 0 }}>
             {highlight.title}
           </p>
           <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
@@ -91,12 +91,12 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
         <div
           onClick={() => setIsExpanded(!isExpanded)}
           style={{
-            background: '#F0EEFB',
+            background: '#F8F2E6',
             borderRadius: '10px',
             padding: '10px 12px',
             marginBottom: '10px',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(155,143,204,0.14)',
+            boxShadow: '0 2px 8px rgba(201,168,108,0.14)',
             position: 'relative',
             transition: 'opacity 0.15s',
           }}
@@ -110,11 +110,11 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
             marginRight: '6px', verticalAlign: 'middle', flexShrink: 0,
           }} />
           <span
-            style={{ fontSize: '13.5px', fontWeight: 500, color: '#4A3F7A', lineHeight: '1.55', whiteSpace: 'pre-line' }}
+            style={{ fontSize: '13.5px', fontWeight: 500, color: '#4A3F2A', lineHeight: '1.55', whiteSpace: 'pre-line' }}
             dangerouslySetInnerHTML={{ __html: escapeHtml(displayText) }}
           />
           {highlight.text.length > 50 && (
-            <p style={{ fontSize: '11px', color: '#9B8FCC', marginTop: '5px', marginLeft: '13px' }}>
+            <p style={{ fontSize: '11px', color: '#B0A07A', marginTop: '5px', marginLeft: '13px' }}>
               {isExpanded ? 'collapse' : 'expand'}
             </p>
           )}
@@ -135,8 +135,8 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               return (
                 <span key={index} style={{
                   display: 'inline-block', padding: '2px 8px', borderRadius: '9999px',
-                  fontSize: '11px', fontWeight: 600, backgroundColor: '#EDEDF8',
-                  color: '#5B52A3', letterSpacing: '0.01em',
+                  fontSize: '11px', fontWeight: 600, backgroundColor: '#F4ECDD',
+                  color: '#9A7B43', letterSpacing: '0.01em',
                 }}>
                   {escapeHtml(displayTag)}
                 </span>
@@ -184,7 +184,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
 
         {/* Footer */}
         {showUrl && (
-          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #EAE9F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #F0EADD', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <a
               href={sanitizeUrl(highlight.url)}
               target="_blank"

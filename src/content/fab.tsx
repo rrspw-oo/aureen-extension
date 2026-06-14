@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import styles from '@/index.css?inline';
 import { registerFabFns, hideFab } from './fab-bridge';
@@ -11,6 +11,13 @@ let fabReactRoot: ReturnType<typeof createRoot> | null = null;
 function mountFab(): void {
   if (fabHost) {
     fabHost.style.display = 'block';
+    return;
+  }
+
+  // Another content-script instance (double injection) may already own a FAB.
+  const existingHost = document.getElementById('aureen-fab-host');
+  if (existingHost) {
+    (existingHost as HTMLElement).style.display = 'block';
     return;
   }
 
@@ -57,15 +64,15 @@ function unmountFab(): void {
 
 registerFabFns(mountFab, unmountFab);
 
-const PRIMARY = '#9B8FCC';
+const PRIMARY = '#A9863F';
 const ACCENT  = '#C9A86C';
 
 const ITEMS = [
   {
     label: 'Open sidebar',
     color: PRIMARY,
-    bg: 'linear-gradient(135deg, #b5acde 0%, #9B8FCC 100%)',
-    shadow: 'rgba(155,143,204,0.45)',
+    bg: 'linear-gradient(135deg, #D8BC85 0%, #B8975B 100%)',
+    shadow: 'rgba(169,134,63,0.42)',
     action: 'sidebar',
     icon: (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -105,8 +112,48 @@ const ITEMS = [
   },
 ];
 
+const FAB_SIZE = 56;
+const DRAG_THRESHOLD = 4;
+const POSITION_KEY = 'fabPosition';
+
+interface FabPosition {
+  top: number;
+  left: number;
+}
+
+function defaultPosition(): FabPosition {
+  return {
+    top: window.innerHeight - FAB_SIZE - 28,
+    left: window.innerWidth - FAB_SIZE - 28,
+  };
+}
+
+function clampPosition(pos: FabPosition): FabPosition {
+  return {
+    top: Math.max(8, Math.min(pos.top, window.innerHeight - FAB_SIZE - 8)),
+    left: Math.max(8, Math.min(pos.left, window.innerWidth - FAB_SIZE - 8)),
+  };
+}
+
 const FabButton: React.FC = () => {
   const [expanded, setExpanded] = useState(false);
+  const [position, setPosition] = useState<FabPosition>(defaultPosition);
+  const [dragging, setDragging] = useState(false);
+
+  const dragState = useRef<{ startX: number; startY: number; originTop: number; originLeft: number; moved: boolean } | null>(null);
+
+  useEffect(() => {
+    chrome.storage.local.get(POSITION_KEY).then((data) => {
+      const saved = data[POSITION_KEY] as FabPosition | undefined;
+      if (saved && typeof saved.top === 'number' && typeof saved.left === 'number') {
+        setPosition(clampPosition(saved));
+      }
+    });
+  }, []);
+
+  // Expand toward the inside of the viewport so the menu never overflows.
+  const expandUp = position.top > window.innerHeight / 2;
+  const expandLeft = position.left > window.innerWidth / 2;
 
   const handleAction = (action: string): void => {
     setExpanded(false);
@@ -116,27 +163,67 @@ const FabButton: React.FC = () => {
     if (action === 'fullpage')   startFullPageCapture();
   };
 
+  const handlePointerDown = (e: React.PointerEvent): void => {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragState.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originTop: position.top,
+      originLeft: position.left,
+      moved: false,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent): void => {
+    const state = dragState.current;
+    if (!state) return;
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+    if (!state.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (!state.moved) {
+      state.moved = true;
+      setDragging(true);
+      setExpanded(false);
+    }
+    setPosition(clampPosition({ top: state.originTop + dy, left: state.originLeft + dx }));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent): void => {
+    const state = dragState.current;
+    dragState.current = null;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    if (state?.moved) {
+      setDragging(false);
+      setPosition((current) => {
+        chrome.storage.local.set({ [POSITION_KEY]: current });
+        return current;
+      });
+    } else {
+      setExpanded((v) => !v);
+    }
+  };
+
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: '28px',
-        right: '28px',
+        top: `${position.top}px`,
+        left: `${position.left}px`,
         zIndex: 2147483647,
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
+        flexDirection: expandUp ? 'column-reverse' : 'column',
+        alignItems: expandLeft ? 'flex-start' : 'flex-end',
         gap: '8px',
       }}
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
     >
       {ITEMS.map((item, i) => (
-        expanded ? (
+        expanded && !dragging ? (
           <div
             key={item.action}
             style={{
               display: 'flex',
+              flexDirection: expandLeft ? 'row-reverse' : 'row',
               alignItems: 'center',
               gap: '10px',
               animation: `fabItemIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both`,
@@ -195,29 +282,24 @@ const FabButton: React.FC = () => {
       ))}
 
       <button
-        onClick={() => setExpanded(e => !e)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         title="Aureen"
         style={{
-          width: '56px',
-          height: '56px',
+          width: `${FAB_SIZE}px`,
+          height: `${FAB_SIZE}px`,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #b5acde 0%, #8a7ec0 100%)',
+          background: 'linear-gradient(135deg, #D8BC85 0%, #C0A05B 100%)',
           border: 'none',
-          cursor: 'pointer',
+          cursor: dragging ? 'grabbing' : 'grab',
+          touchAction: 'none',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(138,126,192,0.5), 0 1px 6px rgba(0,0,0,0.15)',
-          transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s ease',
+          boxShadow: '0 4px 20px rgba(201,168,108,0.5), 0 1px 6px rgba(31,26,12,0.15)',
+          transition: 'box-shadow 0.18s ease',
           flexShrink: 0,
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 6px 24px rgba(138,126,192,0.6), 0 2px 8px rgba(0,0,0,0.18)';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(138,126,192,0.5), 0 1px 6px rgba(0,0,0,0.15)';
         }}
       >
         <svg

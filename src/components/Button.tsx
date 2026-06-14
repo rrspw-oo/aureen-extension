@@ -37,17 +37,20 @@ export const Button: React.FC<ButtonProps> = ({
       case 'primary':
         return {
           backgroundColor: isHovered ? COLORS.primaryHover : COLORS.primary,
-          color: COLORS.textPrimary,
+          color: COLORS.onGold,
+          border: '1px solid transparent',
         };
       case 'danger':
         return {
           backgroundColor: isHovered ? COLORS.dangerHover : COLORS.danger,
           color: COLORS.dangerText,
+          border: '1px solid transparent',
         };
       case 'secondary':
         return {
-          backgroundColor: isHovered ? COLORS.gray100 : COLORS.gray50,
-          color: COLORS.textPrimary,
+          backgroundColor: isHovered ? COLORS.goldSoft : COLORS.surfaceWhite,
+          color: COLORS.goldChipText,
+          border: `1px solid ${COLORS.goldBorderStrong}`,
         };
     }
   };

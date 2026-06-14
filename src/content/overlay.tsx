@@ -140,10 +140,10 @@ export const HighlightOverlay: React.FC<OverlayProps> = ({
             disabled={loading}
           />
 
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+          <div className="bg-[#FAF4E9] border border-[#E8DCC2] rounded-lg p-4">
             <div className="flex items-start gap-3">
               <svg
-                className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5"
+                className="w-5 h-5 text-[#A9863F] flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -155,9 +155,9 @@ export const HighlightOverlay: React.FC<OverlayProps> = ({
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <div className="text-sm text-emerald-800">
+              <div className="text-sm text-[#7E6332]">
                 <p className="font-medium mb-1">Quick Tips:</p>
-                <ul className="list-disc list-inside space-y-1 text-emerald-700">
+                <ul className="list-disc list-inside space-y-1 text-[#9A7B43]">
                   <li>Use tags to organize highlights across different pages</li>
                   <li>Tags can be filtered later in the sidebar</li>
                   <li>Separate multiple tags with spaces or commas</li>
@@ -179,7 +179,7 @@ export const HighlightOverlay: React.FC<OverlayProps> = ({
           <button
             onClick={handleSave}
             disabled={loading}
-            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 bg-[#A9863F] text-white rounded-lg hover:bg-[#9A7B43] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading && (
               <svg

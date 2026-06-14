@@ -43,8 +43,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               ${color.bg}
               ${
                 selectedColor === color.name
-                  ? 'border-emerald-600 ring-2 ring-emerald-200'
-                  : 'border-gray-300 hover:border-emerald-400'
+                  ? 'border-[#A9863F] ring-2 ring-[#E8DCC2]'
+                  : 'border-gray-300 hover:border-[#D8BC85]'
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-110'}
             `}

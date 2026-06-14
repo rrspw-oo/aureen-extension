@@ -72,8 +72,10 @@ export async function cropAndCompressImage(
           0, 0, actualWidth, actualHeight                // Destination region
         );
 
-        // Compress to JPEG
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        // Lossless PNG keeps screenshot text crisp (JPEG ringing caused the
+        // foggy text). Region captures are bounded by the selection size.
+        void quality;
+        const compressedDataUrl = canvas.toDataURL('image/png');
         resolve(compressedDataUrl);
       } catch (error) {
         reject(error);

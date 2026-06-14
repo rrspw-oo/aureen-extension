@@ -48,50 +48,41 @@ export const Popup: React.FC = () => {
     }
   };
 
+  // Route tab-targeted actions through the service worker, which injects the
+  // content script first (ensureContentScript) when it is missing. Sending
+  // directly with chrome.tabs.sendMessage throws an uncaught
+  // "Could not establish connection. Receiving end does not exist." on pages
+  // that have no content script (chrome:// pages, the Web Store, PDFs, or tabs
+  // opened before the extension loaded). The .catch keeps any rejection from
+  // surfacing as an unhandled promise.
   const openSidebar = (): void => {
-    chrome.runtime.sendMessage({ action: 'open-sidebar-in-tab' });
+    chrome.runtime.sendMessage({ action: 'open-sidebar-in-tab' }).catch(() => {});
     window.close();
   };
 
   const jumpToHighlight = (highlightId: string): void => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: 'open-sidebar',
-          data: {
-            tab: 'highlights',
-            subTab: 'saved',
-            highlightId
-          }
-        });
-        window.close();
-      }
-    });
+    chrome.runtime
+      .sendMessage({
+        action: 'open-sidebar-in-tab',
+        data: { tab: 'highlights', subTab: 'saved', highlightId }
+      })
+      .catch(() => {});
+    window.close();
   };
 
   const jumpToCapture = (captureId: string): void => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: 'open-sidebar',
-          data: {
-            tab: 'images',
-            subTab: 'saved',
-            captureId
-          }
-        });
-        window.close();
-      }
-    });
+    chrome.runtime
+      .sendMessage({
+        action: 'open-sidebar-in-tab',
+        data: { tab: 'images', subTab: 'saved', captureId }
+      })
+      .catch(() => {});
+    window.close();
   };
 
   const startScreenshot = (): void => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'start-screenshot' });
-        window.close();
-      }
-    });
+    chrome.runtime.sendMessage({ action: 'start-screenshot-in-tab' }).catch(() => {});
+    window.close();
   };
 
   if (loading || statsLoading) {
@@ -106,36 +97,45 @@ export const Popup: React.FC = () => {
   }
 
   return (
-    <div className="w-96 max-h-[600px] bg-white flex flex-col">
-      <div className="p-6" style={{ backgroundColor: COLORS.primary }}>
-        <h3 className="text-lg font-bold text-gray-800 mb-2">AUREEN</h3>
-        <p className="text-sm text-gray-600">
-          Select any text, highlight it, and export your notes in clean, readable Markdown format
-        </p>
+    <div className="w-96 max-h-[600px] flex flex-col" style={{ backgroundColor: COLORS.surface }}>
+      <div
+        className="px-6 py-5 flex items-center gap-2.5"
+        style={{ borderBottom: `1px solid ${COLORS.goldSoft}` }}
+      >
+        <span
+          className="inline-block rounded-full"
+          style={{ width: 11, height: 11, backgroundColor: COLORS.primary }}
+        />
+        <span
+          className="text-lg"
+          style={{ color: COLORS.textPrimary, fontWeight: 500, letterSpacing: '0.04em' }}
+        >
+          Aureen
+        </span>
       </div>
 
       <div className="p-6 flex-1">
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="rounded-lg p-3 text-center" style={{ backgroundColor: COLORS.primary }}>
-            <div className="text-xl font-bold text-gray-800">
-              {stats.highlightCount}
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          {[
+            { value: stats.highlightCount, label: 'Highlights' },
+            { value: stats.tagCount, label: 'Tags' },
+            { value: stats.captureCount, label: 'Captures' },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-xl p-3 text-center"
+              style={{ backgroundColor: COLORS.goldSoft }}
+            >
+              <div className="text-xl" style={{ color: COLORS.textPrimary, fontWeight: 500 }}>
+                {s.value}
+              </div>
+              <div className="text-xs mt-1" style={{ color: COLORS.goldChipText }}>{s.label}</div>
             </div>
-            <div className="text-xs text-gray-600 mt-1">Highlights</div>
-          </div>
-
-          <div className="rounded-lg p-3 text-center" style={{ backgroundColor: COLORS.primary }}>
-            <div className="text-xl font-bold text-gray-800">{stats.tagCount}</div>
-            <div className="text-xs text-gray-600 mt-1">Tags</div>
-          </div>
-
-          <div className="rounded-lg p-3 text-center" style={{ backgroundColor: COLORS.primary }}>
-            <div className="text-xl font-bold text-gray-800">{stats.captureCount}</div>
-            <div className="text-xs text-gray-600 mt-1">Captures</div>
-          </div>
+          ))}
         </div>
 
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          <h2 className="text-sm font-medium text-[#8B8898] mb-3">
             Recent Highlights
           </h2>
 
@@ -152,7 +152,7 @@ export const Popup: React.FC = () => {
                 <button
                   key={highlight.id}
                   onClick={() => jumpToHighlight(highlight.id)}
-                  className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="w-full text-left p-3 rounded-xl border border-[#EFE7D8] bg-white hover:bg-[#FBF7EE] transition-colors"
                 >
                   <p className="text-sm text-gray-900 line-clamp-2 mb-1">
                     {highlight.text}
@@ -162,7 +162,7 @@ export const Popup: React.FC = () => {
                       {highlight.pageTitle}
                     </p>
                     {highlight.tags.length > 0 && (
-                      <span className="text-xs text-gray-600 font-medium">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[#F4ECDD] text-[#9A7B43]">
                         {highlight.tags[0].replace(/^#+/, '')}
                       </span>
                     )}
@@ -174,7 +174,7 @@ export const Popup: React.FC = () => {
         </div>
 
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
+          <h2 className="text-sm font-medium text-[#8B8898] mb-3">
             Recent Captures
           </h2>
 
@@ -191,7 +191,7 @@ export const Popup: React.FC = () => {
                 <button
                   key={capture.id}
                   onClick={() => jumpToCapture(capture.id)}
-                  className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="w-full text-left p-3 rounded-xl border border-[#EFE7D8] bg-white hover:bg-[#FBF7EE] transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     <img
@@ -210,7 +210,7 @@ export const Popup: React.FC = () => {
                           {new URL(capture.url).hostname}
                         </p>
                         {capture.tags.length > 0 && (
-                          <span className="text-xs text-gray-600 font-medium">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#F4ECDD] text-[#9A7B43]">
                             {capture.tags[0]}
                           </span>
                         )}
@@ -242,28 +242,18 @@ export const Popup: React.FC = () => {
         </div>
       </div>
 
-      <div className="border-t border-gray-200 p-4 bg-gray-50">
-        <div className="text-center mb-3">
-          <p className="text-xs text-gray-500">
-            Press <kbd className="px-2 py-1 bg-white border border-gray-300 rounded">
+      <div className="p-4" style={{ borderTop: `1px solid ${COLORS.goldSoft}` }}>
+        <div className="text-center">
+          <p className="text-xs" style={{ color: '#A8A4B2' }}>
+            Press <kbd className="px-2 py-0.5 bg-white border border-[#EBE3D3] rounded" style={{ color: COLORS.goldChipText }}>
               Alt+H
             </kbd>{' '}
             to highlight,{' '}
-            <kbd className="px-2 py-1 bg-white border border-gray-300 rounded">
+            <kbd className="px-2 py-0.5 bg-white border border-[#EBE3D3] rounded" style={{ color: COLORS.goldChipText }}>
               Alt+S
             </kbd>{' '}
-            to open sidebar
+            for sidebar
           </p>
-        </div>
-        <div className="text-center">
-          <a
-            href="https://github.com/[YOUR_REPO]"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-gray-500 hover:text-gray-700 underline"
-          >
-            GitHub
-          </a>
         </div>
       </div>
     </div>

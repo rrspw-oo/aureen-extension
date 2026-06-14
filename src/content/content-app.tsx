@@ -362,10 +362,17 @@ let contentAppRoot: ReturnType<typeof createRoot> | null = null;
 
 function initContentApp(): void {
   const containerId = 'highlight-extension-root';
-  let container = document.getElementById(containerId);
+  const existing = document.getElementById(containerId);
 
-  if (!container) {
-    container = document.createElement('div');
+  // If another content-script instance already mounted the overlay (double
+  // injection: manifest content script + service-worker fallback), don't mount
+  // a second React root onto the page.
+  if (existing && !contentAppRoot) {
+    return;
+  }
+
+  const container = existing ?? document.createElement('div');
+  if (!existing) {
     container.id = containerId;
     document.body.appendChild(container);
   }

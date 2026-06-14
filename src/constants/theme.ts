@@ -7,19 +7,29 @@
  * Brand colors
  */
 export const COLORS = {
-  primary: '#9B8FCC',
-  primaryHover: '#8A7EBB',
-  primaryDark: '#7C6EAF',
+  // Aureen brand — champagne gold, light & airy
+  primary: '#C9A86C',
+  primaryHover: '#B8975B',
+  primaryDark: '#A9863F',
 
-  accent: '#C9A86C',
-  accentHover: '#B8975B',
+  accent: '#A9863F',
+  accentHover: '#977636',
 
-  surface: '#F5F4FA',
-  border: '#E2E0EE',
+  // Soft champagne tints + warm ivory surfaces
+  goldSoft: '#F6EFE2',
+  goldChip: '#F4ECDD',
+  goldChipText: '#9A7B43',
+  goldBorder: '#EBE3D3',
+  goldBorderStrong: '#E0D6C2',
+  onGold: '#2C2417',
 
-  secondary: '#f59e0b',
-  secondaryHover: '#d97706',
-  secondaryDark: '#b45309',
+  surface: '#FBFAF7',
+  surfaceWhite: '#ffffff',
+  border: '#EFE7D8',
+
+  secondary: '#C9A86C',
+  secondaryHover: '#B8975B',
+  secondaryDark: '#A9863F',
 
   danger: '#EFDDDD',
   dangerHover: '#E5CDCD',
@@ -28,7 +38,7 @@ export const COLORS = {
   success: '#10b981',
   successHover: '#059669',
 
-  highlightYellow: '#DDDDEF',
+  highlightYellow: '#F3E7C9',
   highlightMint: '#d1fae5',
   highlightCoral: '#fed7d7',
   highlightPeach: '#fde68a',

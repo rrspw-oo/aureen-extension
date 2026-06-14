@@ -72,7 +72,7 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
           )}
           {capture.ocrStatus === 'done' && capture.ocrText && (
             <span
-              className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-600 text-white"
+              className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#A9863F] text-white"
               title={capture.ocrText.slice(0, 200)}
             >
               text
@@ -130,7 +130,7 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
         <div className="p-3">
           {/* Title */}
           {capture.title && (
-            <p className="text-xs font-semibold text-indigo-700 mb-1.5 truncate">{capture.title}</p>
+            <p className="text-xs font-semibold text-[#9A7B43] mb-1.5 truncate">{capture.title}</p>
           )}
 
           {/* Tags */}
@@ -168,7 +168,7 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
             <span className="truncate flex-1">{getDomain(capture.url)}</span>
             <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
               {capture.linkedIds && capture.linkedIds.length > 0 && (
-                <span className="flex items-center gap-0.5 text-indigo-400">
+                <span className="flex items-center gap-0.5 text-[#C9A86C]">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
@@ -225,7 +225,7 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
               <p className="text-sm mb-1">{capture.note || 'No note'}</p>
               <p className="text-xs text-gray-300">{capture.url}</p>
               {capture.linkedIds && capture.linkedIds.length > 0 && (
-                <p className="text-xs text-indigo-300 mt-1">{capture.linkedIds.length} linked items</p>
+                <p className="text-xs text-[#E0CFA0] mt-1">{capture.linkedIds.length} linked items</p>
               )}
             </div>
           </div>

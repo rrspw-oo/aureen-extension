@@ -318,7 +318,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                 </div>
 
                 {/* Selected text preview */}
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r">
+                <div className="bg-[#F8F2E6] border-l-4 border-[#E0D6C2] p-3 rounded-r">
                   <p className="text-sm text-gray-700 line-clamp-3">{activeAction.text}</p>
                 </div>
 
@@ -332,7 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                     value={titleInputValue}
                     onChange={(e) => setTitleInputValue(e.target.value)}
                     placeholder="e.g. Key concept from lecture 3"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-sm"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
                   />
                 </div>
 
@@ -347,7 +347,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                     value={tagInputValue}
                     onChange={(e) => setTagInputValue(e.target.value)}
                     placeholder="e.g. important, research, todo"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-sm"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const tags = tagInputValue.split(/[,\s]+/).map(t => sanitizeTagName(t)).filter(t => t.length > 0);
@@ -395,7 +395,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                     onChange={(e) => setNoteInputValue(e.target.value)}
                     placeholder="Study notes, thoughts, or context about this highlight..."
                     rows={3}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-sm resize-none"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm resize-none"
                   />
                 </div>
 
@@ -404,12 +404,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                   <button
                     type="button"
                     onClick={() => setShowLinkedPicker(v => !v)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-indigo-600 transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-[#9A7B43] transition-colors"
                   >
                     <span>{showLinkedPicker ? '▾' : '▸'}</span>
                     Link to existing items
                     {linkedIds.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+                      <span className="ml-1 px-1.5 py-0.5 bg-[#F4ECDD] text-[#9A7B43] rounded-full text-xs font-bold">
                         {linkedIds.length}
                       </span>
                     )}
@@ -423,7 +423,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                           value={linkedSearch}
                           onChange={(e) => setLinkedSearch(e.target.value)}
                           placeholder="Search highlights or captures..."
-                          className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#E0CFA0]"
                         />
                       </div>
                       <div className="max-h-48 overflow-y-auto">
@@ -446,7 +446,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                                 className="mt-0.5 flex-shrink-0"
                               />
                               <div className="min-w-0">
-                                <p className="text-xs font-medium text-indigo-700 truncate">
+                                <p className="text-xs font-medium text-[#9A7B43] truncate">
                                   {h.title || h.text.slice(0, 40)}
                                 </p>
                                 {h.tags.length > 0 && (
@@ -475,7 +475,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                               <div className="flex items-center gap-2 min-w-0">
                                 <img src={c.imageData} alt="" className="w-8 h-6 object-cover rounded flex-shrink-0" />
                                 <div className="min-w-0">
-                                  <p className="text-xs font-medium text-green-700 truncate">
+                                  <p className="text-xs font-medium text-[#9A7B43] truncate">
                                     {c.title || 'Screenshot'}
                                   </p>
                                   {c.tags.length > 0 && (
