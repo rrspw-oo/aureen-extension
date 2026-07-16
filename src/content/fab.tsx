@@ -208,13 +208,19 @@ const FabButton: React.FC = () => {
     <div
       style={{
         position: 'fixed',
-        top: `${position.top}px`,
-        left: `${position.left}px`,
         zIndex: 2147483647,
         display: 'flex',
-        flexDirection: expandUp ? 'column-reverse' : 'column',
-        alignItems: expandLeft ? 'flex-start' : 'flex-end',
+        // Pin the container to the corner the FAB lives in and let the menu
+        // grow toward the inside of the viewport so it never overflows.
+        flexDirection: expandUp ? 'column' : 'column-reverse',
+        alignItems: expandLeft ? 'flex-end' : 'flex-start',
         gap: '8px',
+        ...(expandUp
+          ? { bottom: `${Math.max(8, window.innerHeight - position.top - FAB_SIZE)}px` }
+          : { top: `${position.top}px` }),
+        ...(expandLeft
+          ? { right: `${Math.max(8, window.innerWidth - position.left - FAB_SIZE)}px` }
+          : { left: `${position.left}px` }),
       }}
     >
       {ITEMS.map((item, i) => (
@@ -223,7 +229,7 @@ const FabButton: React.FC = () => {
             key={item.action}
             style={{
               display: 'flex',
-              flexDirection: expandLeft ? 'row-reverse' : 'row',
+              flexDirection: expandLeft ? 'row' : 'row-reverse',
               alignItems: 'center',
               gap: '10px',
               animation: `fabItemIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both`,

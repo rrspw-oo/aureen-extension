@@ -10,11 +10,13 @@ import { COLORS } from '@/constants/theme';
 interface ImageCaptureCardProps {
   capture: ImageCapture;
   onDelete: (id: string) => void;
+  onEdit?: (capture: ImageCapture) => void;
 }
 
 export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
   capture,
-  onDelete
+  onDelete,
+  onEdit
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
@@ -59,42 +61,36 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
             className="absolute inset-0 w-full h-full object-cover"
           />
 
-          {capture.ocrStatus && capture.ocrStatus !== 'done' && (
-            <span
-              className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                capture.ocrStatus === 'failed'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-black bg-opacity-60 text-white'
-              }`}
-            >
-              {capture.ocrStatus === 'failed' ? 'OCR failed' : 'OCR...'}
-            </span>
-          )}
-          {capture.ocrStatus === 'done' && capture.ocrText && (
-            <span
-              className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#A9863F] text-white"
-              title={capture.ocrText.slice(0, 200)}
-            >
-              text
-            </span>
-          )}
-
           {/* Action buttons overlay */}
           {showActions && (
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center gap-2">
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center gap-1.5">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowLightbox(true);
                 }}
-                className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                className="p-1.5 bg-white rounded-full hover:bg-gray-100 transition-colors"
                 title="View"
               >
-                <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </button>
+              {onEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(capture);
+                  }}
+                  className="p-1.5 bg-white rounded-full hover:bg-[#FBF5EA] transition-colors"
+                  title="Edit"
+                >
+                  <svg className="w-4 h-4 text-[#9A7B43]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -103,10 +99,10 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
                   link.download = `aureen-capture-${capture.createdAt}.jpg`;
                   link.click();
                 }}
-                className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                className="p-1.5 bg-white rounded-full hover:bg-gray-100 transition-colors"
                 title="Download"
               >
-                <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </button>
@@ -115,10 +111,10 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
                   e.stopPropagation();
                   onDelete(capture.id);
                 }}
-                className="p-2 bg-white rounded-full hover:bg-red-50 transition-colors"
+                className="p-1.5 bg-white rounded-full hover:bg-red-50 transition-colors"
                 title="Delete"
               >
-                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
@@ -141,8 +137,8 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
                   key={tag}
                   className="inline-block px-2 py-0.5 text-xs font-medium rounded"
                   style={{
-                    backgroundColor: COLORS.primary,
-                    color: '#374151'
+                    backgroundColor: COLORS.goldChip,
+                    color: COLORS.goldChipText
                   }}
                 >
                   {tag}

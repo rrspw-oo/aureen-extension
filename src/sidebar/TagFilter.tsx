@@ -72,21 +72,16 @@ export const TagFilter: React.FC<TagFilterProps> = ({
                 key={tag.name}
                 onClick={() => toggleTag(tag.name)}
                 className={`
-                  inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all
+                  inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all border
                   ${
                     isSelected
-                      ? 'bg-[#A9863F] text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-[#C9A86C] text-[#2C2417] border-[#C9A86C]'
+                      : 'bg-[#F4ECDD] text-[#9A7B43] border-[#E6DCC6] hover:bg-[#EFE4CE]'
                   }
                 `}
               >
                 <span dangerouslySetInnerHTML={{ __html: `#${escapeHtml(tag.name)}` }} />
-                <span
-                  className={`
-                    text-xs px-2 py-0.5 rounded-full
-                    ${isSelected ? 'bg-[#9A7B43]' : 'bg-gray-200'}
-                  `}
-                >
+                <span className="text-xs px-2 py-0.5 rounded-full bg-white text-[#9A7B43]">
                   {tag.highlightCount}
                 </span>
               </button>

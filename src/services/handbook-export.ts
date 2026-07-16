@@ -244,17 +244,34 @@ function itemHtml(
   return pageShell(inner, pageNumber);
 }
 
-/** Group items into chapters by their primary tag, untagged last. */
+/**
+ * Group items into chapters by tag. An item appears in a chapter for EACH of
+ * its tags (so everything sharing a tag is collected together, even when an
+ * item carries several tags). Items with no tags go to a final "untagged"
+ * chapter. Tags are de-duplicated per item so an item is never listed twice in
+ * the same chapter.
+ */
 function buildChapters(items: HandbookItem[]): Chapter[] {
   const map = new Map<string, HandbookItem[]>();
   const order: string[] = [];
-  for (const item of items) {
-    const key = item.tags[0]?.trim() || UNTAGGED_KEY;
+
+  const push = (key: string, item: HandbookItem): void => {
     if (!map.has(key)) {
       map.set(key, []);
       order.push(key);
     }
     map.get(key)!.push(item);
+  };
+
+  for (const item of items) {
+    const tags = Array.from(
+      new Set(item.tags.map((t) => t.trim()).filter(Boolean))
+    );
+    if (tags.length === 0) {
+      push(UNTAGGED_KEY, item);
+    } else {
+      for (const tag of tags) push(tag, item);
+    }
   }
 
   const chapters: Chapter[] = order.map((key) => {
@@ -349,18 +366,13 @@ async function buildHandbookBlob(
 }
 
 function captureToItem(capture: ImageCapture, index: number): HandbookItem {
-  let bodyEmptyReason: string | undefined;
-  if (!capture.ocrText?.trim()) {
-    bodyEmptyReason =
-      capture.ocrStatus === 'failed' ? L.ocrFailed : L.ocrPending;
-  }
+  // OCR is disabled — captures are presented as their original screenshot
+  // (plus title/tags/note), with no recognised-text body.
   return {
     heading: capture.title?.trim() || L.captureFallback(index + 1),
     tags: capture.tags,
     imageData: capture.imageData,
     note: capture.note,
-    body: capture.ocrText,
-    bodyEmptyReason,
     source: sourceLabel(capture.url),
     createdAt: capture.createdAt
   };

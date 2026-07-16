@@ -60,17 +60,17 @@ export const ImageTagFilter: React.FC<ImageTagFilterProps> = ({
               onClick={() => handleTagClick(tag.name)}
               className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
               style={{
-                backgroundColor: isSelected ? COLORS.secondary : COLORS.primary,
-                color: isSelected ? 'white' : '#374151',
-                border: isSelected ? `2px solid ${COLORS.secondary}` : '2px solid transparent'
+                backgroundColor: isSelected ? COLORS.primary : COLORS.goldChip,
+                color: isSelected ? COLORS.onGold : COLORS.goldChipText,
+                border: `1px solid ${isSelected ? COLORS.primary : COLORS.goldBorderStrong}`
               }}
             >
               {tag.name}
               <span
                 className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
                 style={{
-                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                  color: isSelected ? 'white' : '#6b7280'
+                  backgroundColor: '#ffffff',
+                  color: COLORS.goldChipText
                 }}
               >
                 {tag.captureCount}

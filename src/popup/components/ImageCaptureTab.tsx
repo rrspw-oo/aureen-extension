@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { imageCaptureStorage } from '@/services/image-capture-storage';
-import { runOcrForCapture } from '@/services/ocr';
 import { formatBytes } from '@/services/screenshot';
 import type { ImageCapture, ImageTag } from '@/types/image-capture';
 import { ImageCaptureCard } from './ImageCaptureCard';
@@ -18,6 +17,119 @@ import { resetCaptureData } from '@/content/sidebar-shadow';
 interface ImageCaptureTabProps {
   initialData?: Record<string, unknown>;
 }
+
+/**
+ * Modal for re-editing a saved screenshot's title, tags and note.
+ */
+const EditCaptureModal: React.FC<{
+  capture: ImageCapture;
+  onClose: () => void;
+  onSaved: () => void;
+}> = ({ capture, onClose, onSaved }) => {
+  const [title, setTitle] = useState(capture.title ?? '');
+  const [tags, setTags] = useState(capture.tags.join(', '));
+  const [note, setNote] = useState(capture.note ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const inputCls =
+    'w-full px-3 py-2 bg-white border border-[#E2D6BE] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C]';
+  const labelCls = 'block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide';
+
+  const handleSave = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      const parsedTags = tags
+        .split(/[,\s]+/)
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      await imageCaptureStorage.updateCapture(capture.id, {
+        title: title.trim() || undefined,
+        tags: parsedTags,
+        note: note.trim()
+      });
+      onSaved();
+    } catch (error) {
+      console.error('Failed to update capture:', error);
+      alert('Failed to update screenshot');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 p-4"
+      onClick={saving ? undefined : onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>
+          Edit screenshot
+        </h3>
+        <img
+          src={capture.imageData}
+          alt="Screenshot"
+          className="mt-3 w-full max-h-28 object-contain rounded-lg border border-[#EFE7D8] bg-[#FBFAF7]"
+        />
+
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className={labelCls}>Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Pricing table"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Tags</label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g. research, pricing"
+              className={inputCls}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+              }}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Notes</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder="Add a note about this screenshot..."
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-md bg-[#C9A86C] px-4 py-1.5 text-sm font-medium text-[#2C2417] hover:bg-[#B8975B] disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData }) => {
   const [captures, setCaptures] = useState<ImageCapture[]>([]);
@@ -45,6 +157,9 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
 
   // Export state
   const [showExportDialog, setShowExportDialog] = useState(false);
+
+  // Editing a saved capture
+  const [editingCapture, setEditingCapture] = useState<ImageCapture | null>(null);
 
   useEffect(() => {
     loadData();
@@ -143,13 +258,10 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
         note: editNote.trim(),
         title: editTitle.trim() || undefined,
         linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
-        createdAt: initialData.timestamp as number,
-        ocrStatus: 'pending' as const
+        createdAt: initialData.timestamp as number
       };
 
       await imageCaptureStorage.saveCapture(capture);
-
-      void runOcrForCapture(capture.id, capture.imageData);
 
       setIsEditingCapture(false);
       setEditTags('');
@@ -577,6 +689,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                       key={capture.id}
                       capture={capture}
                       onDelete={handleDelete}
+                      onEdit={setEditingCapture}
                     />
                   ))}
                 </div>
@@ -590,6 +703,17 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
         <ExportHandbookDialog
           tag={selectedTags.length > 0 ? selectedTags[0] : undefined}
           onClose={() => setShowExportDialog(false)}
+        />
+      )}
+
+      {editingCapture && (
+        <EditCaptureModal
+          capture={editingCapture}
+          onClose={() => setEditingCapture(null)}
+          onSaved={async () => {
+            setEditingCapture(null);
+            await loadData();
+          }}
         />
       )}
     </div>
