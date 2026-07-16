@@ -307,6 +307,132 @@ function flattenChapters(chapters: Chapter[]): ContentPage[] {
   return pages;
 }
 
+function addTextPage(
+  doc: jsPDF,
+  page: ContentPage,
+  pageNumber: number
+): void {
+  const { item, chapterIndex, chapterLabel } = page;
+  const left = 56;
+  const right = PAGE_WIDTH_PX - 56;
+  const maxWidth = right - left;
+  let y = 68;
+
+  doc.setFillColor(201, 168, 108);
+  doc.circle(left + 4, y - 4, 4, 'F');
+  doc.setTextColor(31, 31, 46);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Aureen', left + 18, y);
+  doc.setTextColor(148, 146, 168);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'normal');
+  doc.text(String(pageNumber).padStart(2, '0'), right, y, { align: 'right' });
+
+  y = 130;
+  if (chapterLabel) {
+    doc.setTextColor(201, 168, 108);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${L.chapter(chapterIndex)}  ${chapterLabel}`, left, y);
+    y += 28;
+  }
+
+  doc.setTextColor(31, 31, 46);
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  const heading = doc.splitTextToSize(item.heading, maxWidth) as string[];
+  doc.text(heading, left, y);
+  y += heading.length * 31 + 12;
+
+  if (item.tags.length) {
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(31, 31, 46);
+    const tags = item.tags.map((tag) => `#${tag}`).join('  ');
+    doc.text(tags, left, y);
+    y += 24;
+  }
+
+  doc.setDrawColor(226, 224, 238);
+  doc.line(left, y, right, y);
+  y += 30;
+
+  doc.setTextColor(58, 58, 74);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'normal');
+  const body = doc.splitTextToSize(item.body?.trim() || item.note?.trim() || '', maxWidth) as string[];
+  doc.text(body, left, y, { lineHeightFactor: 1.85 });
+  y += body.length * 26 + 24;
+
+  if (item.note?.trim() && item.body?.trim()) {
+    doc.setTextColor(31, 31, 46);
+    const note = doc.splitTextToSize(`${L.note}  ${item.note.trim()}`, maxWidth) as string[];
+    doc.text(note, left, y, { lineHeightFactor: 1.7 });
+    y += note.length * 24 + 20;
+  }
+
+  if (item.source) {
+    doc.setTextColor(148, 146, 168);
+    doc.setFontSize(12);
+    doc.text(`${L.source}  ${item.source}`, left, PAGE_HEIGHT_PX - 52);
+  }
+}
+
+function buildTextHandbookBlob(
+  items: HandbookItem[],
+  title: string,
+  unit: string
+): Blob {
+  const chapters = buildChapters(items);
+  const contentPages = flattenChapters(chapters);
+  const showToc = contentPages.length >= TOC_MIN_ITEMS;
+  const firstContentPage = showToc ? 3 : 2;
+  const doc = new jsPDF({ unit: 'px', format: [PAGE_WIDTH_PX, PAGE_HEIGHT_PX], compress: true });
+
+  doc.setTextColor(31, 31, 46);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(46);
+  doc.text(title, 56, 520, { maxWidth: PAGE_WIDTH_PX - 112 });
+  doc.setTextColor(148, 146, 168);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(16);
+  doc.text(formatDate(Date.now()), 56, 570);
+  doc.text(`${items.length} ${unit}`, 56, 598);
+
+  if (showToc) {
+    doc.addPage([PAGE_WIDTH_PX, PAGE_HEIGHT_PX], 'portrait');
+    doc.setTextColor(31, 31, 46);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(24);
+    doc.text(L.tocHeading, 56, 110);
+    let y = 150;
+    for (const chapter of chapters) {
+      doc.setTextColor(201, 168, 108);
+      doc.setFontSize(13);
+      doc.text(chapter.label, 56, y);
+      y += 24;
+      doc.setTextColor(31, 31, 46);
+      doc.setFontSize(14);
+      for (const item of chapter.items) {
+        const lines = doc.splitTextToSize(item.heading, PAGE_WIDTH_PX - 160) as string[];
+        doc.text(lines[0], 72, y);
+        doc.setTextColor(148, 146, 168);
+        doc.text(String(firstContentPage + contentPages.findIndex((page) => page.item === item)).padStart(2, '0'), PAGE_WIDTH_PX - 56, y, { align: 'right' });
+        doc.setTextColor(31, 31, 46);
+        y += 24;
+      }
+      y += 18;
+    }
+  }
+
+  contentPages.forEach((page, index) => {
+    doc.addPage([PAGE_WIDTH_PX, PAGE_HEIGHT_PX], 'portrait');
+    addTextPage(doc, page, firstContentPage + index);
+  });
+  return doc.output('blob');
+}
+
 async function rasterize(html: string): Promise<string> {
   const host = document.createElement('div');
   host.style.position = 'fixed';
@@ -365,6 +491,10 @@ async function buildHandbookBlob(
   return doc.output('blob');
 }
 
+function hasRenderableImages(items: HandbookItem[], includeImage: boolean): boolean {
+  return items.some((item) => shouldShowImage(item, includeImage));
+}
+
 function captureToItem(capture: ImageCapture, index: number): HandbookItem {
   // OCR is disabled — captures are presented as their original screenshot
   // (plus title/tags/note), with no recognised-text body.
@@ -421,7 +551,9 @@ export async function exportHandbook(options: HandbookOptions): Promise<number> 
   const items = captures.map(captureToItem);
   const title = options.title?.trim() || (options.tag ? `${L.handbookTitle} #${options.tag}` : L.handbookTitle);
 
-  const blob = await buildHandbookBlob(items, tagColors, options, title, L.captureUnit);
+  const blob = hasRenderableImages(items, options.includeImage)
+    ? await buildHandbookBlob(items, tagColors, options, title, L.captureUnit)
+    : buildTextHandbookBlob(items, title, L.captureUnit);
   const baseName = options.tag ? `aureen-handbook-${options.tag}` : 'aureen-handbook';
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');
   return items.length;
@@ -445,7 +577,9 @@ export async function exportHighlightHandbook(options: HandbookOptions): Promise
   const items = highlights.map(highlightToItem);
   const title = options.title?.trim() || (options.tag ? `${L.highlightTitle} #${options.tag}` : L.highlightTitle);
 
-  const blob = await buildHandbookBlob(items, tagColors, options, title, L.highlightUnit);
+  const blob = hasRenderableImages(items, options.includeImage)
+    ? await buildHandbookBlob(items, tagColors, options, title, L.highlightUnit)
+    : buildTextHandbookBlob(items, title, L.highlightUnit);
   const baseName = options.tag ? `aureen-highlights-${options.tag}` : 'aureen-highlights';
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');
   return items.length;

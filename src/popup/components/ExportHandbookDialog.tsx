@@ -5,6 +5,8 @@ import {
   getHandbookCount,
   getHighlightHandbookCount
 } from '@/services/handbook-export';
+import { imageCaptureStorage } from '@/services/image-capture-storage';
+import { storageService } from '@/services/storage';
 
 interface ExportHandbookDialogProps {
   kind?: 'capture' | 'highlight';
@@ -20,22 +22,34 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
   const isHighlight = kind === 'highlight';
   const [includeImage, setIncludeImage] = useState(true);
   const [count, setCount] = useState<number | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [selectedTag, setSelectedTag] = useState(tag || '');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const counter = isHighlight ? getHighlightHandbookCount : getHandbookCount;
-    counter(tag).then(setCount).catch(() => setCount(0));
-  }, [tag, isHighlight]);
+    counter(selectedTag || undefined).then(setCount).catch(() => setCount(0));
+  }, [selectedTag, isHighlight]);
+
+  useEffect(() => {
+    const loadTags = async () => {
+      const allTags = isHighlight
+        ? Object.values(await storageService.getAllTags())
+        : await imageCaptureStorage.getAllTags();
+      setTags(allTags.map((item) => item.name).sort((a, b) => a.localeCompare(b)));
+    };
+    loadTags();
+  }, [isHighlight]);
 
   const handleConfirm = async () => {
     setExporting(true);
     setError(null);
     try {
       if (isHighlight) {
-        await exportHighlightHandbook({ includeImage: false, tag });
+        await exportHighlightHandbook({ includeImage: false, tag: selectedTag || undefined });
       } else {
-        await exportHandbook({ includeImage, tag });
+        await exportHandbook({ includeImage, tag: selectedTag || undefined });
       }
       onClose();
     } catch (err) {
@@ -62,6 +76,21 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
         <p className="mt-1 text-xs text-gray-500">
           {count === null ? 'Counting...' : `${count} ${unit}`}
         </p>
+
+        {tags.length > 0 && (
+          <label className="mt-4 block text-sm text-gray-700">
+            Export by tag
+            <select
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+              disabled={exporting}
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
+            >
+              <option value="">All tags</option>
+              {tags.map((item) => <option key={item} value={item}>#{item}</option>)}
+            </select>
+          </label>
+        )}
 
         {!isHighlight && (
           <label className="mt-4 flex items-start gap-2.5 cursor-pointer">
