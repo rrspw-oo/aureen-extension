@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPrice, parsePriceInput } from '../src/utils/price.ts';
+import { extractPrice, parsePriceInput } from '../src/lib/price.ts';
 
 test('NT$ with thousands separator', () => {
   assert.deepEqual(extractPrice('Desk lamp NT$1,290 free shipping'), { amount: 1290, label: 'NT$1,290' });

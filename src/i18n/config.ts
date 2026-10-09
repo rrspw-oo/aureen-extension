@@ -6,9 +6,9 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import en from './locales/en.json';
-import zhTW from './locales/zh-TW.json';
-import fr from './locales/fr.json';
+import en from '@/i18n/locales/en.json';
+import zhTW from '@/i18n/locales/zh-TW.json';
+import fr from '@/i18n/locales/fr.json';
 
 const resources = {
   en: { translation: en },

@@ -43,15 +43,6 @@ export interface ImageTag {
 }
 
 /**
- * Complete storage schema for image captures
- * Uses separate storage keys from highlights
- */
-export interface ImageStorageData {
-  captures: Record<string, ImageCapture>;
-  tags: Record<string, ImageTag>;
-}
-
-/**
  * Rectangle coordinates for screenshot selection
  */
 export interface SelectionRect {
@@ -59,24 +50,6 @@ export interface SelectionRect {
   y: number;
   width: number;
   height: number;
-}
-
-/**
- * Screenshot capture request message
- */
-export interface CaptureScreenshotMessage {
-  action: 'capture-screenshot';
-  rect: SelectionRect;
-  tabId: number;
-}
-
-/**
- * Screenshot capture response message
- */
-export interface CaptureScreenshotResponse {
-  success: boolean;
-  dataUrl?: string;
-  error?: string;
 }
 
 /**

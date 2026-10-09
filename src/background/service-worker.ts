@@ -3,8 +3,8 @@
  * Handles extension lifecycle, context menus, and communication between components
  */
 
-import { storageService } from '@/services/storage';
-import { captureVisibleTab } from '@/services/screenshot';
+import { storageService } from '@/lib/highlight-store';
+import { captureVisibleTab } from '@/lib/screenshot';
 import type { SelectionRect } from '@/types/image-capture';
 
 function dataUrlToBlob(dataUrl: string): Blob {

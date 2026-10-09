@@ -14,7 +14,7 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: false,
     rollupOptions: {
-      input: resolve(__dirname, 'src/content/index.ts'),
+      input: resolve(__dirname, 'src/page/index.ts'),
       output: {
         format: 'iife',
         inlineDynamicImports: true,
