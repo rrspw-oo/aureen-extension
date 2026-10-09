@@ -30,9 +30,10 @@ The Extension collects and stores the following data **locally on your device on
    - Links to other saved items you choose to connect
    - Timestamp of creation
    - Recognized text, only when you choose "Recognize text" on a screenshot (processed offline on your device)
+   - An optional price, read from the recognized text or typed by you, used to sort the compare view
 
 3. **User Preferences**
-   - Default highlight color and interface language
+   - Default highlight color (the color you picked last) and interface language
    - Position of the floating button on the page
 
 ### How Data is Stored

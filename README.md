@@ -20,7 +20,7 @@ But after closing tabs or switching tasks, you often forget:
 
 ### Text Highlighting
 
-- Highlight text on any webpage with one click
+- Highlight text on any webpage with one click, in champagne, mint, rose or sky. The color you pick last becomes the default
 - Saved highlights are marked again when you revisit the page, including selections that span bold text or links. If the page layout changed, Aureen finds the text again by its content. Links that differ only by `#section` or `utm_*` tracking parameters count as the same page
 - On a highlight card for the current page, click "Show on page" to scroll to that text
 - Automatically save source URL and page title
@@ -34,13 +34,14 @@ But after closing tabs or switching tasks, you often forget:
 - Automatically save screenshot source
 - Organize with tags (e.g., `#product`, `#reference`)
 - Recognize text in a saved screenshot offline (Traditional Chinese and English): hover a screenshot, click "Recognize text", then copy the result from the preview
-- Compare product images and prices across different websites
+- Compare screenshots that share a tag side by side, sorted by price. Prices are read from recognized text automatically and can be edited
 
 ### Sidebar Management
 
 - Press `Alt+S` to open sidebar
-- Filter and group by tags
-- View all highlights and screenshots
+- Switch between Highlights and Captures at the top; each shows its count
+- Search text, titles, notes and recognized text; filter with tag chips (an item matches if it has any selected tag)
+- Highlights are grouped by page, with the page you are on listed first
 - Delete or export data with one click
 - Link related highlights and screenshots, then jump between them
 
@@ -81,45 +82,52 @@ But after closing tabs or switching tasks, you often forget:
 
 ### Highlighting Text
 
-1. Select text on any webpage
-2. Click the highlight button in the floating toolbar
-3. Sidebar opens - type a tag and press Enter, a comma (`,` `，` `、`), or a space to turn it into a tag chip. Enter never saves the form, so confirming a Zhuyin candidate is safe
-4. Click "Save Highlight" (or press Cmd/Ctrl + Enter) to save. Text still in the tag field is saved as a tag
+1. Select text on any webpage. A dark toolbar appears above it
+2. Click "Highlight", or a color dot to highlight in that color, or the note button to highlight and jump straight to the note field
+3. A form slides up in the sidebar - type a tag and press Enter, a comma (`,` `，` `、`), or a space to turn it into a tag chip. Enter never saves the form, so confirming a Zhuyin candidate is safe. Recently used tags are one click away under the field
+4. Click "Save highlight" (or press Cmd/Ctrl + Enter) to save. Text still in the tag field is saved as a tag. Esc discards the new highlight
 
-Each form field has a one-line note under its label saying where it shows up (card, PDF handbook, filters).
+Each form field has a short note next to its label saying where it shows up (card, PDF handbook, filters).
 
 ### Capturing Screenshots
 
-1. Click the extension icon to show the floating button, then choose "Screenshot"
+1. Click the extension icon to show the floating button, then choose "Capture region" (or use the "Capture a region" tile in the Captures tab)
 2. Drag to select the region you want to capture
-3. Sidebar opens - enter tags and optional notes
-4. Click "Save Screenshot" to save
+3. A form slides up - enter a title, tags, an optional price and notes
+4. Click "Save screenshot" to save
+
+### Comparing Prices
+
+1. In the Captures tab, select one or more tags and click "Compare"
+2. Screenshots with those tags are listed side by side, cheapest first, with the lowest marked
+3. A price comes from the screenshot's recognized text; click "Recognize text" on a row without a price. Click any price to correct it. A price you type always wins over the recognized one
+4. Highlights with the same tags are listed below for context
 
 ### Capturing a Full Page
 
-1. Choose "Full page" from the floating button
+1. Choose "Capture full page" from the floating button
 2. A bar appears at the top. Scroll until the dashed "Capture ends here" line sits where the capture should stop, then click "Capture to here". Click "Whole page" to capture everything, or "Cancel" (or Esc) to stop
 3. In the new screenshot form, click "Trim" to drag the top and bottom lines and cut off anything else, then "Apply"
-4. Click "Save Screenshot"
+4. Click "Save screenshot"
 
 ### Linking Related Items
 
-1. In a highlight or screenshot form, open "Link to existing items" and tick the related items
-2. Links show on both sides. On a highlight card, click the link count to list them; on a screenshot, open its preview
+1. In a highlight or screenshot form, open "Link related items" and tick the related items. Items from the same page are listed first
+2. Links show on both sides: on a highlight card they are listed under the text; on a screenshot, open its preview
 3. Click a linked item to jump to it: highlights scroll into view and flash, screenshots open their preview
 
 ### Showing and Hiding Aureen
 
 - Click the extension icon to show the floating button. Click it again to hide the floating button and the sidebar
-- Use "Hide" in the floating button menu to hide it
-- Press Esc to close the sidebar (not while typing in a field or while a preview or dialog is open)
+- "Close" in the sidebar header (or Esc) folds the sidebar back into the floating button. Esc does nothing while you type in a field or while a preview or form is open
+- Use "Hide" in the floating button menu to hide the button too
 
 ### Managing and Filtering
 
 1. Press `Alt+S` to open sidebar
-2. Switch between "Highlights" and "Captures" tabs
-3. Click any tag to filter related content
-4. Use export function to download all data
+2. Switch between "Highlights" and "Captures" at the top
+3. Search, or click tag chips to filter
+4. Use the export button in the header for the PDF handbook, JSON or Markdown (JSON and Markdown cover highlights), or "Export handbook" at the bottom of the Captures tab
 
 ---
 
@@ -131,8 +139,7 @@ When browsing similar products across multiple shopping websites:
 
 - Capture product images with tags like `#3C #comparison #laptop`
 - Highlight price and specifications
-- Later, open sidebar and filter by `#comparison` to view all products at once
-- Quickly compare specifications and prices
+- Later, select `#comparison` in the Captures tab and click "Compare" to see every product sorted by price
 
 ### Research and Note-taking
 
