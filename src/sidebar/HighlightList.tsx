@@ -6,17 +6,24 @@
 import React from 'react';
 import { HighlightCard } from '@/components/HighlightCard';
 import type { Highlight } from '@/types';
+import type { LinkEntry, LinkKind } from '@/components/LinkedItems';
 
 interface HighlightListProps {
   highlights: Highlight[];
   onEdit?: (highlight: Highlight) => void;
   onDelete?: (highlightId: string) => void;
+  getLinks?: (highlight: Highlight) => LinkEntry[];
+  onNavigate?: (kind: LinkKind, id: string) => void;
+  focusedId?: string | null;
 }
 
 export const HighlightList: React.FC<HighlightListProps> = ({
   highlights,
   onEdit,
-  onDelete
+  onDelete,
+  getLinks,
+  onNavigate,
+  focusedId
 }) => {
 
   if (highlights.length === 0) {
@@ -52,6 +59,9 @@ export const HighlightList: React.FC<HighlightListProps> = ({
           onEdit={onEdit}
           onDelete={onDelete}
           showUrl={true}
+          links={getLinks ? getLinks(highlight) : []}
+          onNavigate={onNavigate}
+          focused={focusedId === highlight.id}
         />
       ))}
     </div>

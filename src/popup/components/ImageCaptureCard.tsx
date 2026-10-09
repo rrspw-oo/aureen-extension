@@ -3,8 +3,9 @@
  * Displays a single captured screenshot as a card
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ImageCapture } from '@/types/image-capture';
+import { LinkedItems, type LinkEntry, type LinkKind } from '@/components/LinkedItems';
 import { COLORS } from '@/constants/theme';
 
 interface ImageCaptureCardProps {
@@ -13,6 +14,10 @@ interface ImageCaptureCardProps {
   onEdit?: (capture: ImageCapture) => void;
   onRecognize: (capture: ImageCapture) => void;
   ocrRunning: boolean;
+  links: LinkEntry[];
+  onNavigate?: (kind: LinkKind, id: string) => void;
+  autoOpen: boolean;
+  onAutoOpened: () => void;
 }
 
 export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
@@ -20,11 +25,31 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
   onDelete,
   onEdit,
   onRecognize,
-  ocrRunning
+  ocrRunning,
+  links,
+  onNavigate,
+  autoOpen,
+  onAutoOpened
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (autoOpen) {
+      setShowLightbox(true);
+      onAutoOpened();
+    }
+  }, [autoOpen]);
+
+  useEffect(() => {
+    if (!showLightbox) return;
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setShowLightbox(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showLightbox]);
 
   const handleCopyText = async (): Promise<void> => {
     await navigator.clipboard.writeText(capture.ocrText || '');
@@ -205,12 +230,12 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span className="truncate flex-1">{getDomain(capture.url)}</span>
             <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
-              {capture.linkedIds && capture.linkedIds.length > 0 && (
-                <span className="flex items-center gap-0.5 text-[#C9A86C]">
+              {links.length > 0 && (
+                <span className="flex items-center gap-0.5 text-[#C9A86C]" title="Linked items, listed in the preview">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  {capture.linkedIds.length}
+                  {links.length}
                 </span>
               )}
               <span>{getRelativeTime(capture.createdAt)}</span>
@@ -222,10 +247,11 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
       {/* Lightbox */}
       {showLightbox && (
         <div
+          data-aureen-modal
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[99999]"
           onClick={() => setShowLightbox(false)}
         >
-          <div className="relative max-w-6xl max-h-[90vh] p-4">
+          <div className="relative max-w-6xl max-h-[90vh] p-4 overflow-y-auto">
             <div className="absolute top-6 right-6 flex items-center gap-2">
               <button
                 onClick={(e) => {
@@ -262,8 +288,17 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
               {capture.title && <p className="text-sm font-semibold mb-1">{capture.title}</p>}
               <p className="text-sm mb-1">{capture.note || 'No note'}</p>
               <p className="text-xs text-gray-300">{capture.url}</p>
-              {capture.linkedIds && capture.linkedIds.length > 0 && (
-                <p className="text-xs text-[#E0CFA0] mt-1">{capture.linkedIds.length} linked items</p>
+              {links.length > 0 && onNavigate && (
+                <div className="mt-3 pt-3 border-t border-white border-opacity-20" onClick={(e) => e.stopPropagation()}>
+                  <LinkedItems
+                    links={links}
+                    dark
+                    onNavigate={(kind, id) => {
+                      setShowLightbox(false);
+                      onNavigate(kind, id);
+                    }}
+                  />
+                </div>
               )}
               {capture.ocrStatus === 'done' && (
                 <div className="mt-3 pt-3 border-t border-white border-opacity-20" onClick={(e) => e.stopPropagation()}>

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { LinkedItems, type LinkEntry, type LinkKind } from '@/components/LinkedItems';
 import { escapeHtml, sanitizeUrl } from '@/utils/security';
 import { COLORS } from '@/constants/theme';
 import { formatDate } from '@/utils/date';
+import { normalizePageUrl } from '@/utils/url';
 import type { Highlight } from '@/types';
 
 interface HighlightCardProps {
@@ -9,16 +11,31 @@ interface HighlightCardProps {
   onEdit?: (highlight: Highlight) => void;
   onDelete?: (highlightId: string) => void;
   showUrl?: boolean;
+  links?: LinkEntry[];
+  onNavigate?: (kind: LinkKind, id: string) => void;
+  focused?: boolean;
 }
 
 export const HighlightCard: React.FC<HighlightCardProps> = ({
   highlight,
   onEdit,
   onDelete,
-  showUrl = true
+  showUrl = true,
+  links = [],
+  onNavigate,
+  focused = false
 }) => {
   const createdDate = formatDate(highlight.createdAt);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showLinks, setShowLinks] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const onThisPage = normalizePageUrl(highlight.url) === normalizePageUrl(window.location.href);
+
+  useEffect(() => {
+    if (focused) {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [focused]);
 
   const displayText = isExpanded
     ? highlight.text
@@ -32,12 +49,14 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
   };
 
   return (
-    <div style={{
+    <div ref={cardRef} data-highlight-id={highlight.id} style={{
       background: '#ffffff',
       borderRadius: '14px',
       overflow: 'hidden',
       boxShadow: '0 4px 20px rgba(201,168,108,0.12), 0 1px 3px rgba(31,26,12,0.05)',
       border: '1px solid #EFE7D8',
+      outline: focused ? `2px solid ${COLORS.accent}` : 'none',
+      outlineOffset: '2px',
       transition: 'box-shadow 0.2s, transform 0.15s',
     }}
       className="highlight-card"
@@ -142,13 +161,18 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
                 </span>
               );
             })}
-            {highlight.linkedIds && highlight.linkedIds.length > 0 && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: COLORS.primary }}>
+            {links.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowLinks(v => !v)}
+                title={showLinks ? 'Hide linked items' : 'Show linked items'}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: COLORS.primary, background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', borderRadius: '6px' }}
+              >
                 <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
-                {highlight.linkedIds.length}
-              </span>
+                {links.length}
+              </button>
             )}
           </div>
 
@@ -182,6 +206,12 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
           )}
         </div>
 
+        {showLinks && links.length > 0 && onNavigate && (
+          <div style={{ marginTop: '10px' }}>
+            <LinkedItems links={links} onNavigate={onNavigate} />
+          </div>
+        )}
+
         {/* Footer */}
         {showUrl && (
           <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #F0EADD', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -196,6 +226,16 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
             >
               {escapeHtml(highlight.pageTitle)}
             </a>
+            {onThisPage && (
+              <button
+                type="button"
+                onClick={() => window.postMessage({ type: 'AUREEN_SCROLL_TO_HIGHLIGHT', highlightId: highlight.id }, '*')}
+                title="Scroll to this highlight on the page"
+                style={{ fontSize: '11px', fontWeight: 600, color: COLORS.primary, background: '#FBF5EA', border: 'none', borderRadius: '6px', padding: '2px 8px', cursor: 'pointer', flexShrink: 0 }}
+              >
+                Show on page
+              </button>
+            )}
             <span style={{ fontSize: '11px', color: '#c4c3d0', flexShrink: 0 }}>{createdDate}</span>
           </div>
         )}

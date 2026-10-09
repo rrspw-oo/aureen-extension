@@ -9,7 +9,8 @@ import { imageCaptureStorage } from '@/services/image-capture-storage';
 import { HighlightList } from './HighlightList';
 import { Button } from '@/components/Button';
 import { COLORS } from '@/constants/theme';
-import { sanitizeTagName } from '@/utils/security';
+import { TagInput, withPendingTag } from '@/components/TagInput';
+import { resolveLinks, type LinkKind } from '@/components/LinkedItems';
 import type { Highlight, Tag } from '@/types';
 import type { ImageCapture } from '@/types/image-capture';
 
@@ -17,19 +18,23 @@ type SortBy = 'date' | 'tag';
 
 interface SidebarProps {
   initialData?: Record<string, unknown>;
+  focusHighlightId?: string | null;
+  onNavigate?: (kind: LinkKind, id: string) => void;
+  onFocusHandled?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ initialData, focusHighlightId, onNavigate, onFocusHandled }) => {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [filteredHighlights, setFilteredHighlights] = useState<Highlight[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [loading, setLoading] = useState(true);
-  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [showTagFilter, setShowTagFilter] = useState(false);
   const [showSortOptions, setShowSortOptions] = useState(false);
-  const [tagInputValue, setTagInputValue] = useState('');
+  const [formTags, setFormTags] = useState<string[]>([]);
+  const [pendingTag, setPendingTag] = useState('');
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [noteInputValue, setNoteInputValue] = useState('');
   const [titleInputValue, setTitleInputValue] = useState('');
 
@@ -70,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       setActiveAction(initialData as typeof activeAction);
-      setTagInputValue('');
+      setFormTags([]);
       setNoteInputValue('');
       setTitleInputValue('');
       setLinkedIds([]);
@@ -104,6 +109,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
   useEffect(() => {
     applyFiltersAndSort();
   }, [highlights, selectedTags, sortBy]);
+
+  useEffect(() => {
+    if (!focusHighlightId || loading) return;
+    setSubTab('saved');
+    setSelectedTags([]);
+    setFocusedId(focusHighlightId);
+    onFocusHandled?.();
+  }, [focusHighlightId, loading]);
+
+  useEffect(() => {
+    if (!focusedId) return;
+    const timer = setTimeout(() => setFocusedId(null), 2000);
+    return () => clearTimeout(timer);
+  }, [focusedId]);
 
   const loadData = async (): Promise<void> => {
     try {
@@ -173,9 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
     });
     setTitleInputValue(highlight.title || '');
     setNoteInputValue(highlight.note || '');
-    setTagInputValue(
-      highlight.tags.filter((t) => t !== 'untagged').join(', ')
-    );
+    setFormTags(highlight.tags.filter((t) => t !== 'untagged'));
     setLinkedIds(highlight.linkedIds || []);
     setSubTab('new');
   };
@@ -243,7 +260,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
 
       await loadData();
       setActiveAction(null);
-      setTagInputValue('');
+      setFormTags([]);
       setNoteInputValue('');
       setTitleInputValue('');
       setLinkedIds([]);
@@ -323,7 +340,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
         {subTab === 'new' ? (
           /* New Highlight Tab */
           activeAction && activeAction.mode !== 'capture' ? (
-            <div className="p-4 bg-gray-50">
+            <div
+              className="p-4 bg-gray-50"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  handleSave(withPendingTag(formTags, pendingTag));
+                }
+              }}
+            >
               <div className="space-y-3">
 
                 {/* Header */}
@@ -344,6 +369,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
                     Title <span className="text-gray-400 font-normal normal-case">(optional)</span>
                   </label>
+                  <p className="text-xs text-gray-400 mb-1.5">Card heading and PDF handbook page title. Defaults to the web page title.</p>
                   <input
                     type="text"
                     value={titleInputValue}
@@ -358,49 +384,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
                     Tags
                   </label>
-                  <input
-                    type="text"
-                    id="tag-input"
-                    value={tagInputValue}
-                    onChange={(e) => setTagInputValue(e.target.value)}
+                  <p className="text-xs text-gray-400 mb-1.5">Used to filter the sidebar and to choose what goes into an export.</p>
+                  <TagInput
+                    key={activeAction.highlightId}
+                    tags={formTags}
+                    onChange={setFormTags}
+                    onSubmit={(next) => handleSave(next)}
+                    onPendingChange={setPendingTag}
+                    suggestions={tags.map((tag) => ({ name: tag.name.startsWith('#') ? tag.name.slice(1) : tag.name }))}
+                    label={null}
+                    hint="Press Enter to add a tag. Click Save when done."
                     placeholder="e.g. important, research, todo"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
-                    onKeyDown={(e) => {
-                      if (e.nativeEvent.isComposing) return;
-                      if (e.key === 'Enter') {
-                        const tags = tagInputValue.split(/[,\s]+/).map(t => sanitizeTagName(t)).filter(t => t.length > 0);
-                        handleSave(tags);
-                      }
-                    }}
-                    onFocus={() => setShowTagSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
+                    maxTags={Infinity}
                   />
-                  {showTagSuggestions && tags.length > 0 && (
-                    <div className="mt-1 p-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
-                      <p className="text-xs text-gray-400 mb-1">Quick select:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {tags.slice(0, 20).map((tag) => {
-                          const displayName = tag.name.startsWith('#') ? tag.name.slice(1) : tag.name;
-                          return (
-                            <button
-                              key={tag.name}
-                              type="button"
-                              onClick={() => {
-                                const cur = tagInputValue.trim();
-                                setTagInputValue(cur ? `${cur}, ${displayName}` : displayName);
-                              }}
-                              className="px-2 py-0.5 text-xs rounded transition-colors"
-                              style={{ backgroundColor: COLORS.primary, color: COLORS.textPrimary }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.primaryHover}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.primary}
-                            >
-                              {displayName}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Note */}
@@ -408,6 +404,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
                     Notes <span className="text-gray-400 font-normal normal-case">(optional)</span>
                   </label>
+                  <p className="text-xs text-gray-400 mb-1.5">Shown on the card and in the PDF handbook.</p>
                   <textarea
                     value={noteInputValue}
                     onChange={(e) => setNoteInputValue(e.target.value)}
@@ -432,6 +429,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                       </span>
                     )}
                   </button>
+
+                  <p className="text-xs text-gray-400 mt-1">Connect related highlights or screenshots. Each side lists the other and you can jump between them.</p>
 
                   {showLinkedPicker && (
                     <div className="mt-2 border border-gray-200 rounded-lg bg-white overflow-hidden">
@@ -513,16 +512,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
 
                 {/* Save */}
                 <Button
-                  onClick={() => {
-                    const tags = tagInputValue.split(/[,\s]+/).map(t => sanitizeTagName(t)).filter(t => t.length > 0);
-                    handleSave(tags);
-                  }}
+                  onClick={() => handleSave(withPendingTag(formTags, pendingTag))}
                   variant="primary"
                   fullWidth
                   className="mt-1"
                 >
                   Save Highlight
                 </Button>
+                <p className="text-xs text-gray-400 text-center">Shortcut: Cmd/Ctrl + Enter</p>
 
               </div>
             </div>
@@ -647,6 +644,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                 highlights={filteredHighlights}
                 onEdit={handleEditHighlight}
                 onDelete={handleDelete}
+                getLinks={(h) => resolveLinks(h.id, h.linkedIds, highlights, allCaptures)}
+                onNavigate={onNavigate}
+                focusedId={focusedId}
               />
             </div>
           </>

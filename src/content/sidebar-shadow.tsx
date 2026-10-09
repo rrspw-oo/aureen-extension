@@ -13,6 +13,7 @@ import { showFab, hideFab } from './fab-bridge';
 import { exportImportService } from '@/services/export-import';
 import { storageService } from '@/services/storage';
 import { ExportHandbookDialog } from '@/popup/components/ExportHandbookDialog';
+import type { LinkKind } from '@/components/LinkedItems';
 
 type TabType = 'highlights' | 'images';
 
@@ -255,6 +256,12 @@ const BottomTabBar: React.FC<{ activeTab: TabType; onTabChange: (tab: TabType) =
 const SidebarApp: React.FC = () => {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [activeTab, setActiveTab] = useState<TabType>('highlights');
+  const [focusTarget, setFocusTarget] = useState<{ kind: LinkKind; id: string } | null>(null);
+
+  const handleNavigate = (kind: LinkKind, id: string): void => {
+    setActiveTab(kind === 'highlight' ? 'highlights' : 'images');
+    setFocusTarget({ kind, id });
+  };
 
   useEffect(() => {
     const handleData = (event: Event): void => {
@@ -386,9 +393,19 @@ const SidebarApp: React.FC = () => {
 
       <div style={{ flex: 1, overflow: 'hidden', background: '#FBFAF7' }}>
         {activeTab === 'highlights' ? (
-          <Sidebar initialData={data} />
+          <Sidebar
+            initialData={data}
+            focusHighlightId={focusTarget?.kind === 'highlight' ? focusTarget.id : null}
+            onNavigate={handleNavigate}
+            onFocusHandled={() => setFocusTarget(null)}
+          />
         ) : (
-          <ImageCaptureTab initialData={data} />
+          <ImageCaptureTab
+            initialData={data}
+            focusCaptureId={focusTarget?.kind === 'capture' ? focusTarget.id : null}
+            onNavigate={handleNavigate}
+            onFocusHandled={() => setFocusTarget(null)}
+          />
         )}
       </div>
 

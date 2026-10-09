@@ -11,24 +11,38 @@ import type { ImageCapture, ImageTag } from '@/types/image-capture';
 import { ImageCaptureCard } from './ImageCaptureCard';
 import { ExportHandbookDialog } from './ExportHandbookDialog';
 import { ImageTagFilter } from './ImageTagFilter';
+import { TrimImageModal } from './TrimImageModal';
+import { TagInput, withPendingTag } from '@/components/TagInput';
+import { resolveLinks, type LinkKind } from '@/components/LinkedItems';
 import { Button } from '@/components/Button';
 import { COLORS } from '@/constants/theme';
 import { resetCaptureData } from '@/content/sidebar-shadow';
 
 interface ImageCaptureTabProps {
   initialData?: Record<string, unknown>;
+  focusCaptureId?: string | null;
+  onNavigate?: (kind: LinkKind, id: string) => void;
+  onFocusHandled?: () => void;
 }
+
+const HINT_CLS = 'text-xs text-gray-400 mb-1.5';
+const TITLE_HINT = 'Card heading and PDF handbook page title.';
+const TAGS_HINT = 'Used to filter screenshots and to choose what goes into an export.';
+const NOTES_HINT = 'Shown on the card, in the preview, and in the PDF handbook.';
+const TAG_ENTER_HINT = 'Press Enter to add a tag. Click Save when done.';
 
 /**
  * Modal for re-editing a saved screenshot's title, tags and note.
  */
 const EditCaptureModal: React.FC<{
   capture: ImageCapture;
+  allTags: ImageTag[];
   onClose: () => void;
   onSaved: () => void;
-}> = ({ capture, onClose, onSaved }) => {
+}> = ({ capture, allTags, onClose, onSaved }) => {
   const [title, setTitle] = useState(capture.title ?? '');
-  const [tags, setTags] = useState(capture.tags.join(', '));
+  const [tags, setTags] = useState<string[]>(capture.tags);
+  const [pendingTag, setPendingTag] = useState('');
   const [note, setNote] = useState(capture.note ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -36,16 +50,12 @@ const EditCaptureModal: React.FC<{
     'w-full px-3 py-2 bg-white border border-[#E2D6BE] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C]';
   const labelCls = 'block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide';
 
-  const handleSave = async (): Promise<void> => {
+  const handleSave = async (finalTags: string[] = withPendingTag(tags, pendingTag)): Promise<void> => {
     setSaving(true);
     try {
-      const parsedTags = tags
-        .split(/[,\s]+/)
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0);
       await imageCaptureStorage.updateCapture(capture.id, {
         title: title.trim() || undefined,
-        tags: parsedTags,
+        tags: finalTags,
         note: note.trim()
       });
       onSaved();
@@ -59,12 +69,19 @@ const EditCaptureModal: React.FC<{
 
   return (
     <div
+      data-aureen-modal
       className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30 p-4"
       onClick={saving ? undefined : onClose}
     >
       <div
         className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            handleSave();
+          }
+        }}
       >
         <h3 className="text-base font-semibold" style={{ color: COLORS.textPrimary }}>
           Edit screenshot
@@ -78,6 +95,7 @@ const EditCaptureModal: React.FC<{
         <div className="mt-4 space-y-3">
           <div>
             <label className={labelCls}>Title</label>
+            <p className={HINT_CLS}>{TITLE_HINT}</p>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -87,19 +105,22 @@ const EditCaptureModal: React.FC<{
           </div>
           <div>
             <label className={labelCls}>Tags</label>
-            <input
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
+            <p className={HINT_CLS}>{TAGS_HINT}</p>
+            <TagInput
+              tags={tags}
+              onChange={setTags}
+              onSubmit={(next) => handleSave(next)}
+              onPendingChange={setPendingTag}
+              suggestions={allTags}
+              label={null}
+              hint={TAG_ENTER_HINT}
               placeholder="e.g. research, pricing"
-              className={inputCls}
-              onKeyDown={(e) => {
-                if (e.nativeEvent.isComposing) return;
-                if (e.key === 'Enter') handleSave();
-              }}
+              maxTags={Infinity}
             />
           </div>
           <div>
             <label className={labelCls}>Notes</label>
+            <p className={HINT_CLS}>{NOTES_HINT}</p>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -121,7 +142,7 @@ const EditCaptureModal: React.FC<{
           </button>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving}
             className="rounded-md bg-[#C9A86C] px-4 py-1.5 text-sm font-medium text-[#2C2417] hover:bg-[#B8975B] disabled:opacity-50"
           >
@@ -133,8 +154,9 @@ const EditCaptureModal: React.FC<{
   );
 };
 
-export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData }) => {
+export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData, focusCaptureId, onNavigate, onFocusHandled }) => {
   const [captures, setCaptures] = useState<ImageCapture[]>([]);
+  const [allCaptureList, setAllCaptureList] = useState<ImageCapture[]>([]);
   const [allTags, setAllTags] = useState<ImageTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,17 +164,19 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
 
   // Screenshot editing state
   const [isEditingCapture, setIsEditingCapture] = useState(false);
-  const [editTags, setEditTags] = useState('');
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [pendingTag, setPendingTag] = useState('');
+  const [trimmedImage, setTrimmedImage] = useState<string | null>(null);
+  const [showTrim, setShowTrim] = useState(false);
   const [editNote, setEditNote] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [saving, setSaving] = useState(false);
-  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
 
   // Linked items
   const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [showLinkedPicker, setShowLinkedPicker] = useState(false);
   const [linkedSearch, setLinkedSearch] = useState('');
-  const [allHighlights, setAllHighlights] = useState<{id:string; text:string; title?:string; tags:string[]}[]>([]);
+  const [allHighlights, setAllHighlights] = useState<{id:string; text:string; title?:string; tags:string[]; linkedIds?:string[]}[]>([]);
 
   // Sub-tab state
   const [subTab, setSubTab] = useState<'new' | 'saved'>('saved');
@@ -164,10 +188,22 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
   const [editingCapture, setEditingCapture] = useState<ImageCapture | null>(null);
 
   const [ocrRunningIds, setOcrRunningIds] = useState<string[]>([]);
+  const [lightboxId, setLightboxId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!focusCaptureId || loading) return;
+    setSubTab('saved');
+    if (selectedTags.length > 0) {
+      setSelectedTags([]);
+      setCaptures(allCaptureList);
+    }
+    setLightboxId(focusCaptureId);
+    onFocusHandled?.();
+  }, [focusCaptureId, loading]);
 
   // Detect capture mode from initialData
   useEffect(() => {
@@ -177,7 +213,8 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
       } else if (initialData.mode === 'capture') {
         // A fresh screenshot just came in — switch to New tab and show the editor
         setIsEditingCapture(true);
-        setEditTags('');
+        setEditTags([]);
+        setTrimmedImage(null);
         setEditNote('');
         setEditTitle('');
         setLinkedIds([]);
@@ -188,7 +225,8 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
     } else {
       // initialData was cleared (e.g. resetCaptureData was called) — clear editor
       setIsEditingCapture(false);
-      setEditTags('');
+      setEditTags([]);
+      setTrimmedImage(null);
       setEditNote('');
       setEditTitle('');
       setLinkedIds([]);
@@ -206,9 +244,10 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
       ]);
 
       setCaptures(allCaptures);
+      setAllCaptureList(allCaptures);
       setAllTags(tags);
       setStorageSize(stats.totalSize);
-      setAllHighlights(Object.values(highlights).map(h => ({ id: h.id, text: h.text, title: (h as any).title, tags: h.tags })));
+      setAllHighlights(Object.values(highlights).map(h => ({ id: h.id, text: h.text, title: h.title, tags: h.tags, linkedIds: h.linkedIds })));
     } catch (error) {
       console.error('Failed to load captures:', error);
     } finally {
@@ -255,23 +294,18 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
     }
   };
 
-  const handleSaveCapture = async () => {
+  const handleSaveCapture = async (finalTags: string[] = withPendingTag(editTags, pendingTag)) => {
     if (!initialData || initialData.mode !== 'capture') {
       return;
     }
 
     setSaving(true);
     try {
-      const tags = editTags
-        .split(/[,\s]+/)
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
-
       const capture = {
         id: initialData.captureId as string,
         url: initialData.url as string,
-        imageData: initialData.imageData as string,
-        tags,
+        imageData: trimmedImage ?? (initialData.imageData as string),
+        tags: finalTags,
         note: editNote.trim(),
         title: editTitle.trim() || undefined,
         linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
@@ -281,7 +315,8 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
       await imageCaptureStorage.saveCapture(capture);
 
       setIsEditingCapture(false);
-      setEditTags('');
+      setEditTags([]);
+      setTrimmedImage(null);
       setEditNote('');
       setEditTitle('');
       setLinkedIds([]);
@@ -299,7 +334,8 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
 
   const handleCancelCapture = () => {
     setIsEditingCapture(false);
-    setEditTags('');
+    setEditTags([]);
+    setTrimmedImage(null);
     setEditNote('');
     setEditTitle('');
     setLinkedIds([]);
@@ -367,7 +403,15 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
         {subTab === 'new' ? (
           /* New Screenshot Tab */
           isEditingCapture && initialData?.mode === 'capture' ? (
-            <div className="p-4 bg-gray-50">
+            <div
+              className="p-4 bg-gray-50"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing && !saving) {
+                  e.preventDefault();
+                  handleSaveCapture();
+                }
+              }}
+            >
               <div className="space-y-3">
 
                 {/* Header */}
@@ -385,16 +429,30 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                 {/* Image Preview */}
                 <div className="bg-white p-2 rounded border border-gray-200">
                   <img
-                    src={initialData.imageData as string}
+                    src={trimmedImage ?? (initialData.imageData as string)}
                     alt="Screenshot preview"
                     className="w-full max-h-48 object-contain rounded"
                   />
-                  <div className="mt-2 flex justify-end">
+                  <div className="mt-2 flex justify-end gap-2">
+                    {Boolean(initialData.fullPage) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowTrim(true)}
+                        title="Cut off the top or bottom of this full-page screenshot"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#7E6332] bg-[#F4ECDD] hover:bg-[#E8DCC2] rounded-lg transition-colors"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                          <path d="M1 4h14M1 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                          <path d="M8 6v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                        </svg>
+                        {trimmedImage ? 'Trim again' : 'Trim'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
                         const link = document.createElement('a');
-                        link.href = initialData.imageData as string;
+                        link.href = trimmedImage ?? (initialData.imageData as string);
                         link.download = `aureen-capture-${Date.now()}.jpg`;
                         link.click();
                       }}
@@ -420,6 +478,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
                     Title <span className="text-gray-400 font-normal normal-case">(optional)</span>
                   </label>
+                  <p className={HINT_CLS}>{TITLE_HINT}</p>
                   <input
                     type="text"
                     value={editTitle}
@@ -434,42 +493,19 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
                     Tags
                   </label>
-                  <input
-                    type="text"
-                    value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
+                  <p className={HINT_CLS}>{TAGS_HINT}</p>
+                  <TagInput
+                    key={initialData.captureId as string}
+                    tags={editTags}
+                    onChange={setEditTags}
+                    onSubmit={(next) => handleSaveCapture(next)}
+                    onPendingChange={setPendingTag}
+                    suggestions={allTags}
+                    label={null}
+                    hint={TAG_ENTER_HINT}
                     placeholder="e.g. product, comparison, laptop"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
-                    onKeyDown={(e) => {
-                      if (e.nativeEvent.isComposing) return;
-                      if (e.key === 'Enter') handleSaveCapture();
-                    }}
-                    onFocus={() => setShowTagSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
+                    maxTags={Infinity}
                   />
-                  {showTagSuggestions && allTags.length > 0 && (
-                    <div className="mt-1 p-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
-                      <p className="text-xs text-gray-400 mb-1">Quick select:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {allTags.slice(0, 20).map((tag) => (
-                          <button
-                            key={tag.name}
-                            type="button"
-                            onClick={() => {
-                              const cur = editTags.trim();
-                              setEditTags(cur ? `${cur}, ${tag.name}` : tag.name);
-                            }}
-                            className="px-2 py-0.5 text-xs rounded transition-colors"
-                            style={{ backgroundColor: COLORS.primary, color: COLORS.textPrimary }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = COLORS.primaryHover}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = COLORS.primary}
-                          >
-                            {tag.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Note */}
@@ -477,6 +513,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
                     Notes <span className="text-gray-400 font-normal normal-case">(optional)</span>
                   </label>
+                  <p className={HINT_CLS}>{NOTES_HINT}</p>
                   <textarea
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
@@ -501,6 +538,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                       </span>
                     )}
                   </button>
+                  <p className="text-xs text-gray-400 mt-1">Connect related highlights or screenshots. Each side lists the other and you can jump between them.</p>
 
                   {showLinkedPicker && (
                     <div className="mt-2 border border-gray-200 rounded-lg bg-white overflow-hidden">
@@ -572,7 +610,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
 
                 {/* Save */}
                 <Button
-                  onClick={handleSaveCapture}
+                  onClick={() => handleSaveCapture()}
                   disabled={saving}
                   variant="primary"
                   fullWidth
@@ -580,6 +618,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                 >
                   {saving ? 'Saving...' : 'Save Screenshot'}
                 </Button>
+                <p className="text-xs text-gray-400 text-center">Shortcut: Cmd/Ctrl + Enter</p>
               </div>
             </div>
           ) : (
@@ -710,6 +749,10 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                       onEdit={setEditingCapture}
                       onRecognize={handleRecognize}
                       ocrRunning={ocrRunningIds.includes(capture.id)}
+                      links={resolveLinks(capture.id, capture.linkedIds, allHighlights, allCaptureList)}
+                      onNavigate={onNavigate}
+                      autoOpen={lightboxId === capture.id}
+                      onAutoOpened={() => setLightboxId(null)}
                     />
                   ))}
                 </div>
@@ -726,9 +769,21 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
         />
       )}
 
+      {showTrim && typeof initialData?.imageData === 'string' && (
+        <TrimImageModal
+          imageData={initialData.imageData as string}
+          onCancel={() => setShowTrim(false)}
+          onApply={(cropped) => {
+            setTrimmedImage(cropped);
+            setShowTrim(false);
+          }}
+        />
+      )}
+
       {editingCapture && (
         <EditCaptureModal
           capture={editingCapture}
+          allTags={allTags}
           onClose={() => setEditingCapture(null)}
           onSaved={async () => {
             setEditingCapture(null);
