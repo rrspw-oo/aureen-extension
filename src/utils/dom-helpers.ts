@@ -433,6 +433,14 @@ export function injectHighlightStyles(): void {
       border-color: #C9A86C;
     }
 
+    mark.highlight-mark.yellow { background: #F5E6BF; box-shadow: inset 0 -2px 0 #D9BC7E; }
+    mark.highlight-mark.mint { background: #D3EEDD; box-shadow: inset 0 -2px 0 #86C29C; }
+    mark.highlight-mark.coral { background: #F8D6D2; box-shadow: inset 0 -2px 0 #E09A92; }
+    mark.highlight-mark.peach { background: #FBE3C8; box-shadow: inset 0 -2px 0 #E3AE73; }
+    mark.highlight-mark.lavender { background: #E7DDF6; box-shadow: inset 0 -2px 0 #AE98D6; }
+    mark.highlight-mark.sky { background: #D6E6F8; box-shadow: inset 0 -2px 0 #8FB3DE; }
+    mark.highlight-mark { color: inherit; border-radius: 2px; }
+
     mark.highlight-mark.animate-pulse {
       animation: highlight-pulse 0.5s ease-in-out 3;
     }
