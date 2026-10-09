@@ -92,6 +92,7 @@ const EditCaptureModal: React.FC<{
               placeholder="e.g. research, pricing"
               className={inputCls}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return;
                 if (e.key === 'Enter') handleSave();
               }}
             />
@@ -424,6 +425,7 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                     placeholder="e.g. product, comparison, laptop"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing) return;
                       if (e.key === 'Enter') handleSaveCapture();
                     }}
                     onFocus={() => setShowTagSuggestions(true)}

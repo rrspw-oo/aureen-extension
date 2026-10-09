@@ -284,6 +284,7 @@ const ContentApp: React.FC = () => {
               fontSize: '14px'
             }}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return;
               if (e.key === 'Enter' && !saving) {
                 e.preventDefault();
                 handleSave();

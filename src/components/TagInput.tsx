@@ -41,6 +41,9 @@ export const TagInput: React.FC<TagInputProps> = ({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.nativeEvent.isComposing) {
+      return;
+    }
     if (e.key === 'Enter' || e.key === ' ' || e.key === ',') {
       e.preventDefault();
       addTag(inputValue);

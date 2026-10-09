@@ -345,6 +345,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
                     placeholder="e.g. important, research, todo"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing) return;
                       if (e.key === 'Enter') {
                         const tags = tagInputValue.split(/[,\s]+/).map(t => sanitizeTagName(t)).filter(t => t.length > 0);
                         handleSave(tags);
