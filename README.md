@@ -21,6 +21,8 @@ But after closing tabs or switching tasks, you often forget:
 ### Text Highlighting
 
 - Highlight text on any webpage with one click
+- Saved highlights are marked again when you revisit the page, including selections that span bold text or links. If the page layout changed, Aureen finds the text again by its content. Links that differ only by `#section` or `utm_*` tracking parameters count as the same page
+- On a highlight card for the current page, click "Show on page" to scroll to that text
 - Automatically save source URL and page title
 - Organize with tags (e.g., `#shopping`, `#research`, `#todo`)
 - Export to Markdown or JSON format
@@ -28,6 +30,7 @@ But after closing tabs or switching tasks, you often forget:
 ### Region Screenshot Capture
 
 - Select any region on a webpage to capture
+- Capture a full page, or stop at a point you choose so ads and comments below the article are left out, then trim the top and bottom before saving
 - Automatically save screenshot source
 - Organize with tags (e.g., `#product`, `#reference`)
 - Recognize text in a saved screenshot offline (Traditional Chinese and English): hover a screenshot, click "Recognize text", then copy the result from the preview
@@ -39,6 +42,7 @@ But after closing tabs or switching tasks, you often forget:
 - Filter and group by tags
 - View all highlights and screenshots
 - Delete or export data with one click
+- Link related highlights and screenshots, then jump between them
 
 ---
 
@@ -79,15 +83,36 @@ But after closing tabs or switching tasks, you often forget:
 
 1. Select text on any webpage
 2. Click the highlight button in the floating toolbar
-3. Sidebar opens - enter tags (separated by comma or space)
-4. Click "Save Highlight" to save
+3. Sidebar opens - type a tag and press Enter, a comma (`,` `，` `、`), or a space to turn it into a tag chip. Enter never saves the form, so confirming a Zhuyin candidate is safe
+4. Click "Save Highlight" (or press Cmd/Ctrl + Enter) to save. Text still in the tag field is saved as a tag
+
+Each form field has a one-line note under its label saying where it shows up (card, PDF handbook, filters).
 
 ### Capturing Screenshots
 
-1. Click extension icon or use keyboard shortcut to enter capture mode
+1. Click the extension icon to show the floating button, then choose "Screenshot"
 2. Drag to select the region you want to capture
 3. Sidebar opens - enter tags and optional notes
 4. Click "Save Screenshot" to save
+
+### Capturing a Full Page
+
+1. Choose "Full page" from the floating button
+2. A bar appears at the top. Scroll until the dashed "Capture ends here" line sits where the capture should stop, then click "Capture to here". Click "Whole page" to capture everything, or "Cancel" (or Esc) to stop
+3. In the new screenshot form, click "Trim" to drag the top and bottom lines and cut off anything else, then "Apply"
+4. Click "Save Screenshot"
+
+### Linking Related Items
+
+1. In a highlight or screenshot form, open "Link to existing items" and tick the related items
+2. Links show on both sides. On a highlight card, click the link count to list them; on a screenshot, open its preview
+3. Click a linked item to jump to it: highlights scroll into view and flash, screenshots open their preview
+
+### Showing and Hiding Aureen
+
+- Click the extension icon to show the floating button. Click it again to hide the floating button and the sidebar
+- Use "Hide" in the floating button menu to hide it
+- Press Esc to close the sidebar (not while typing in a field or while a preview or dialog is open)
 
 ### Managing and Filtering
 
@@ -148,5 +173,4 @@ MIT License
 
 - Cloud synchronization
 - Custom highlight colors
-- Edit saved highlights
 - Mobile companion app
