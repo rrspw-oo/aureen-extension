@@ -8,8 +8,16 @@ import { downloadFile, generateFilenameWithDate } from '@/utils/download';
 
 const PAGE_WIDTH_PX = 794;
 const PAGE_HEIGHT_PX = 1123;
-// Higher scale + lossless PNG keeps screenshot text crisp instead of JPEG-blurred.
-const RENDER_SCALE = 3;
+// scale 2 keeps text crisp; scale 3 rendered 2.25x the pixels per page for no
+// visible gain and dominated screenshot export time.
+const RENDER_SCALE = 2;
+
+// A source screenshot only ever displays inside the page column, capped at
+// max-height:680px. Downscaling the bitmap to that footprint (times RENDER_SCALE
+// for retina crispness) once, before html2canvas re-rasterizes it on every page,
+// is the single biggest win for screenshot-heavy handbooks.
+const MAX_IMAGE_WIDTH = (PAGE_WIDTH_PX - 112) * RENDER_SCALE;
+const MAX_IMAGE_HEIGHT = 680 * RENDER_SCALE;
 
 const ACCENT = '#C9A86C';
 const INK = '#1F1F2E';
@@ -20,14 +28,11 @@ const RULE = '#E2E0EE';
 // with a single short chapter does not need a near-empty table of contents.
 const TOC_MIN_ITEMS = 4;
 
-const UNTAGGED_KEY = '__untagged__';
-
 // zh-TW labels, matching the wording used in the shipped handbook.
 const L = {
   tocHeading: '目錄',
   source: '來源',
   note: '備註',
-  untaggedChapter: '未分類',
   chapter: (n: number) => `第 ${n} 章`,
   captureFallback: (n: number) => `截圖 ${n}`,
   highlightFallback: (n: number) => `重點 ${n}`,
@@ -59,24 +64,27 @@ interface HandbookItem {
   createdAt: number;
 }
 
-interface Chapter {
-  key: string;
-  label: string; // e.g. "#shopping" or "未分類"
-  items: HandbookItem[];
-  earliest: number;
-}
-
-// A content page: one item, optionally opening a new chapter.
+// A content page: one item. chapterIndex/chapterLabel are retained for the
+// page renderers but the flat handbook never sets a label.
 interface ContentPage {
   item: HandbookItem;
   chapterIndex: number;
-  chapterLabel?: string; // set only on the first page of a chapter
+  chapterLabel?: string;
 }
 
 export interface HandbookOptions {
   includeImage: boolean;
-  tag?: string;
+  // Selected tag names to export. Empty or undefined exports everything.
+  // Semantics are OR: an item is included if it carries ANY selected tag.
+  tags?: string[];
   title?: string;
+}
+
+/** True when the item carries at least one of the selected tags (OR match). */
+function matchesSelectedTags(itemTags: string[], selected: string[]): boolean {
+  if (selected.length === 0) return true;
+  const lower = new Set(selected.map((t) => t.toLowerCase()));
+  return itemTags.some((t) => lower.has(t.toLowerCase()));
 }
 
 function escapeHtml(value: string): string {
@@ -155,30 +163,15 @@ function coverHtml(title: string, count: number, unit: string): string {
   return pageShell(inner, 1);
 }
 
-/**
- * Contents page grouped by chapter (tag). Each chapter is a heading with its
- * items listed underneath, like a book's table of contents.
- */
-function tocHtml(chapters: Chapter[], firstContentPage: number): string {
-  let page = firstContentPage;
-  const sections = chapters
-    .map((chapter, chapterIndex) => {
-      const rows = chapter.items
-        .map((item) => {
-          const pageLabel = String(page).padStart(2, '0');
-          page += 1;
-          return `
-            <div style="display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid ${RULE};">
-              <div style="font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:16px;">${escapeHtml(item.heading)}</div>
-              <div style="font-size:13px;color:${MUTED};">${pageLabel}</div>
-            </div>
-          `;
-        })
-        .join('');
+/** Flat contents page: one row per item, in the order they appear. */
+function tocHtml(contentPages: ContentPage[], firstContentPage: number): string {
+  const rows = contentPages
+    .map((page, index) => {
+      const pageLabel = String(firstContentPage + index).padStart(2, '0');
       return `
-        <div style="margin-top:${chapterIndex === 0 ? 0 : 22}px;">
-          <div style="font-size:13px;font-weight:700;color:${ACCENT};letter-spacing:0.06em;">${L.chapter(chapterIndex + 1)}　${escapeHtml(chapter.label)}</div>
-          <div style="margin-top:6px;">${rows}</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid ${RULE};">
+          <div style="font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:16px;">${escapeHtml(page.item.heading)}</div>
+          <div style="font-size:13px;color:${MUTED};">${pageLabel}</div>
         </div>
       `;
     })
@@ -186,7 +179,7 @@ function tocHtml(chapters: Chapter[], firstContentPage: number): string {
 
   const inner = `
     <div style="margin-top:40px;font-size:24px;font-weight:700;">${L.tocHeading}</div>
-    <div style="margin-top:18px;flex:1;overflow:hidden;">${sections}</div>
+    <div style="margin-top:18px;flex:1;overflow:hidden;">${rows}</div>
   `;
   return pageShell(inner, 2);
 }
@@ -245,66 +238,15 @@ function itemHtml(
 }
 
 /**
- * Group items into chapters by tag. An item appears in a chapter for EACH of
- * its tags (so everything sharing a tag is collected together, even when an
- * item carries several tags). Items with no tags go to a final "untagged"
- * chapter. Tags are de-duplicated per item so an item is never listed twice in
- * the same chapter.
+ * Collect items into a single time-ordered sequence. Every item appears exactly
+ * ONCE regardless of how many tags it carries; its full tag set is shown as
+ * chips on its own page. There is no per-tag chapter duplication.
  */
-function buildChapters(items: HandbookItem[]): Chapter[] {
-  const map = new Map<string, HandbookItem[]>();
-  const order: string[] = [];
-
-  const push = (key: string, item: HandbookItem): void => {
-    if (!map.has(key)) {
-      map.set(key, []);
-      order.push(key);
-    }
-    map.get(key)!.push(item);
-  };
-
-  for (const item of items) {
-    const tags = Array.from(
-      new Set(item.tags.map((t) => t.trim()).filter(Boolean))
-    );
-    if (tags.length === 0) {
-      push(UNTAGGED_KEY, item);
-    } else {
-      for (const tag of tags) push(tag, item);
-    }
-  }
-
-  const chapters: Chapter[] = order.map((key) => {
-    const chapterItems = map.get(key)!.sort((a, b) => a.createdAt - b.createdAt);
-    return {
-      key,
-      label: key === UNTAGGED_KEY ? L.untaggedChapter : `#${key}`,
-      items: chapterItems,
-      earliest: Math.min(...chapterItems.map((i) => i.createdAt))
-    };
-  });
-
-  chapters.sort((a, b) => {
-    if (a.key === UNTAGGED_KEY) return 1;
-    if (b.key === UNTAGGED_KEY) return -1;
-    return a.earliest - b.earliest;
-  });
-
-  return chapters;
-}
-
-function flattenChapters(chapters: Chapter[]): ContentPage[] {
-  const pages: ContentPage[] = [];
-  chapters.forEach((chapter, chapterIndex) => {
-    chapter.items.forEach((item, itemIndex) => {
-      pages.push({
-        item,
-        chapterIndex: chapterIndex + 1,
-        chapterLabel: itemIndex === 0 ? chapter.label : undefined
-      });
-    });
-  });
-  return pages;
+function buildContentPages(items: HandbookItem[]): ContentPage[] {
+  return items
+    .slice()
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((item) => ({ item, chapterIndex: 1 }));
 }
 
 function addTextPage(
@@ -384,8 +326,7 @@ function buildTextHandbookBlob(
   title: string,
   unit: string
 ): Blob {
-  const chapters = buildChapters(items);
-  const contentPages = flattenChapters(chapters);
+  const contentPages = buildContentPages(items);
   const showToc = contentPages.length >= TOC_MIN_ITEMS;
   const firstContentPage = showToc ? 3 : 2;
   const doc = new jsPDF({ unit: 'px', format: [PAGE_WIDTH_PX, PAGE_HEIGHT_PX], compress: true });
@@ -407,23 +348,15 @@ function buildTextHandbookBlob(
     doc.setFontSize(24);
     doc.text(L.tocHeading, 56, 110);
     let y = 150;
-    for (const chapter of chapters) {
-      doc.setTextColor(201, 168, 108);
-      doc.setFontSize(13);
-      doc.text(chapter.label, 56, y);
-      y += 24;
+    doc.setFontSize(14);
+    contentPages.forEach((page, index) => {
       doc.setTextColor(31, 31, 46);
-      doc.setFontSize(14);
-      for (const item of chapter.items) {
-        const lines = doc.splitTextToSize(item.heading, PAGE_WIDTH_PX - 160) as string[];
-        doc.text(lines[0], 72, y);
-        doc.setTextColor(148, 146, 168);
-        doc.text(String(firstContentPage + contentPages.findIndex((page) => page.item === item)).padStart(2, '0'), PAGE_WIDTH_PX - 56, y, { align: 'right' });
-        doc.setTextColor(31, 31, 46);
-        y += 24;
-      }
-      y += 18;
-    }
+      const lines = doc.splitTextToSize(page.item.heading, PAGE_WIDTH_PX - 160) as string[];
+      doc.text(lines[0], 72, y);
+      doc.setTextColor(148, 146, 168);
+      doc.text(String(firstContentPage + index).padStart(2, '0'), PAGE_WIDTH_PX - 56, y, { align: 'right' });
+      y += 24;
+    });
   }
 
   contentPages.forEach((page, index) => {
@@ -431,6 +364,48 @@ function buildTextHandbookBlob(
     addTextPage(doc, page, firstContentPage + index);
   });
   return doc.output('blob');
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/**
+ * Shrink an oversized source screenshot to the footprint it actually renders at.
+ * Returns the original data URL unchanged when it already fits. JPEG at 0.9
+ * keeps photographic screenshots small; the page still rasterizes to PNG.
+ */
+async function downscaleImage(dataUrl: string): Promise<string> {
+  const img = await loadImage(dataUrl);
+  const ratio = Math.min(
+    1,
+    MAX_IMAGE_WIDTH / img.naturalWidth,
+    MAX_IMAGE_HEIGHT / img.naturalHeight
+  );
+  if (ratio >= 1) return dataUrl;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.naturalWidth * ratio);
+  canvas.height = Math.round(img.naturalHeight * ratio);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+async function downscaleItems(items: HandbookItem[]): Promise<void> {
+  await Promise.all(
+    items.map(async (item) => {
+      if (item.imageData) {
+        item.imageData = await downscaleImage(item.imageData);
+      }
+    })
+  );
 }
 
 async function rasterize(html: string): Promise<string> {
@@ -465,8 +440,7 @@ async function buildHandbookBlob(
   title: string,
   unit: string
 ): Promise<Blob> {
-  const chapters = buildChapters(items);
-  const contentPages = flattenChapters(chapters);
+  const contentPages = buildContentPages(items);
 
   // Contents page only when it carries navigational value.
   const showToc = contentPages.length >= TOC_MIN_ITEMS;
@@ -474,7 +448,7 @@ async function buildHandbookBlob(
 
   const pages: string[] = [coverHtml(title, items.length, unit)];
   if (showToc) {
-    pages.push(tocHtml(chapters, firstContentPage));
+    pages.push(tocHtml(contentPages, firstContentPage));
   }
   contentPages.forEach((page, index) => {
     pages.push(itemHtml(page, firstContentPage + index, options.includeImage, tagColors));
@@ -519,68 +493,87 @@ function highlightToItem(highlight: Highlight, index: number): HandbookItem {
   };
 }
 
-export async function getHandbookCount(tag?: string): Promise<number> {
-  const captures = tag
-    ? await imageCaptureStorage.getCapturesByTags([tag])
-    : await imageCaptureStorage.getAllCaptures();
-  return captures.length;
+function tagScopeLabel(tags?: string[]): string {
+  if (!tags || tags.length === 0) return '';
+  return tags.map((t) => `#${t}`).join(' ');
 }
 
-export async function getHighlightHandbookCount(tag?: string): Promise<number> {
-  const highlights = tag
-    ? await storageService.getHighlightsByTags([tag])
-    : Object.values(await storageService.getAllHighlights());
-  return highlights.length;
+function tagScopeSlug(tags?: string[]): string {
+  if (!tags || tags.length === 0) return '';
+  return tags.join('-');
+}
+
+export async function getHandbookCount(tags?: string[]): Promise<number> {
+  const captures = await imageCaptureStorage.getAllCaptures();
+  const selected = tags ?? [];
+  return captures.filter((c) => matchesSelectedTags(c.tags, selected)).length;
+}
+
+export async function getHighlightHandbookCount(tags?: string[]): Promise<number> {
+  const highlights = Object.values(await storageService.getAllHighlights());
+  const selected = tags ?? [];
+  return highlights.filter((h) => matchesSelectedTags(h.tags, selected)).length;
 }
 
 export async function exportHandbook(options: HandbookOptions): Promise<number> {
-  const [captures, tags] = await Promise.all([
-    options.tag
-      ? imageCaptureStorage.getCapturesByTags([options.tag])
-      : imageCaptureStorage.getAllCaptures(),
+  const [allCaptures, tags] = await Promise.all([
+    imageCaptureStorage.getAllCaptures(),
     imageCaptureStorage.getAllTags()
   ]);
 
+  const selected = options.tags ?? [];
+  const captures = allCaptures.filter((c) => matchesSelectedTags(c.tags, selected));
+
   if (captures.length === 0) {
-    throw new Error(options.tag ? `No captures found for tag: ${options.tag}` : 'No captures to export');
+    throw new Error(selected.length ? 'No captures found for the selected tags' : 'No captures to export');
   }
 
   const tagColors = new Map<string, string>(
     (tags as ImageTag[]).map((t) => [t.name.toLowerCase(), t.color])
   );
   const items = captures.map(captureToItem);
-  const title = options.title?.trim() || (options.tag ? `${L.handbookTitle} #${options.tag}` : L.handbookTitle);
+  const scopeLabel = tagScopeLabel(selected);
+  const title = options.title?.trim() || (scopeLabel ? `${L.handbookTitle} ${scopeLabel}` : L.handbookTitle);
 
-  const blob = hasRenderableImages(items, options.includeImage)
-    ? await buildHandbookBlob(items, tagColors, options, title, L.captureUnit)
-    : buildTextHandbookBlob(items, title, L.captureUnit);
-  const baseName = options.tag ? `aureen-handbook-${options.tag}` : 'aureen-handbook';
+  let blob: Blob;
+  if (hasRenderableImages(items, options.includeImage)) {
+    await downscaleItems(items);
+    blob = await buildHandbookBlob(items, tagColors, options, title, L.captureUnit);
+  } else {
+    blob = buildTextHandbookBlob(items, title, L.captureUnit);
+  }
+  const slug = tagScopeSlug(selected);
+  const baseName = slug ? `aureen-handbook-${slug}` : 'aureen-handbook';
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');
   return items.length;
 }
 
 export async function exportHighlightHandbook(options: HandbookOptions): Promise<number> {
-  const [highlights, tags] = await Promise.all([
-    options.tag
-      ? storageService.getHighlightsByTags([options.tag])
-      : storageService.getAllHighlights().then((h) => Object.values(h)),
+  const [allHighlights, tags] = await Promise.all([
+    storageService.getAllHighlights().then((h) => Object.values(h)),
     storageService.getAllTags()
   ]);
 
+  const selected = options.tags ?? [];
+  const highlights = allHighlights.filter((h) => matchesSelectedTags(h.tags, selected));
+
   if (highlights.length === 0) {
-    throw new Error(options.tag ? `No highlights found for tag: ${options.tag}` : 'No highlights to export');
+    throw new Error(selected.length ? 'No highlights found for the selected tags' : 'No highlights to export');
   }
 
   const tagColors = new Map<string, string>(
     Object.values(tags as Record<string, Tag>).map((t) => [t.name.toLowerCase(), t.color])
   );
   const items = highlights.map(highlightToItem);
-  const title = options.title?.trim() || (options.tag ? `${L.highlightTitle} #${options.tag}` : L.highlightTitle);
+  const scopeLabel = tagScopeLabel(selected);
+  const title = options.title?.trim() || (scopeLabel ? `${L.highlightTitle} ${scopeLabel}` : L.highlightTitle);
 
-  const blob = hasRenderableImages(items, options.includeImage)
-    ? await buildHandbookBlob(items, tagColors, options, title, L.highlightUnit)
+  const highlightOptions: HandbookOptions = { ...options, includeImage: false };
+  const blob = hasRenderableImages(items, highlightOptions.includeImage)
+    ? await buildHandbookBlob(items, tagColors, highlightOptions, title, L.highlightUnit)
     : buildTextHandbookBlob(items, title, L.highlightUnit);
-  const baseName = options.tag ? `aureen-highlights-${options.tag}` : 'aureen-highlights';
+  const slug = tagScopeSlug(selected);
+  const baseName = slug ? `aureen-highlights-${slug}` : 'aureen-highlights';
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');
   return items.length;
 }

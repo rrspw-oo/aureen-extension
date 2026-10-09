@@ -23,14 +23,14 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
   const [includeImage, setIncludeImage] = useState(true);
   const [count, setCount] = useState<number | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [selectedTag, setSelectedTag] = useState(tag || '');
+  const [selectedTags, setSelectedTags] = useState<string[]>(tag ? [tag] : []);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const counter = isHighlight ? getHighlightHandbookCount : getHandbookCount;
-    counter(selectedTag || undefined).then(setCount).catch(() => setCount(0));
-  }, [selectedTag, isHighlight]);
+    counter(selectedTags).then(setCount).catch(() => setCount(0));
+  }, [selectedTags, isHighlight]);
 
   useEffect(() => {
     const loadTags = async () => {
@@ -42,14 +42,20 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
     loadTags();
   }, [isHighlight]);
 
+  const toggleTag = (name: string): void => {
+    setSelectedTags((prev) =>
+      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]
+    );
+  };
+
   const handleConfirm = async () => {
     setExporting(true);
     setError(null);
     try {
       if (isHighlight) {
-        await exportHighlightHandbook({ includeImage: false, tag: selectedTag || undefined });
+        await exportHighlightHandbook({ includeImage: false, tags: selectedTags });
       } else {
-        await exportHandbook({ includeImage, tag: selectedTag || undefined });
+        await exportHandbook({ includeImage, tags: selectedTags });
       }
       onClose();
     } catch (err) {
@@ -71,25 +77,54 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-gray-900">
-          {isHighlight ? 'Export Highlights' : 'Export Handbook'}{tag ? ` #${tag}` : ''}
+          {isHighlight ? 'Export Highlights' : 'Export Handbook'}
         </h3>
         <p className="mt-1 text-xs text-gray-500">
           {count === null ? 'Counting...' : `${count} ${unit}`}
         </p>
 
         {tags.length > 0 && (
-          <label className="mt-4 block text-sm text-gray-700">
-            Export by tag
-            <select
-              value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
-              disabled={exporting}
-              className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm"
-            >
-              <option value="">All tags</option>
-              {tags.map((item) => <option key={item} value={item}>#{item}</option>)}
-            </select>
-          </label>
+          <div className="mt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Choose tags to export</span>
+              {selectedTags.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedTags([])}
+                  disabled={exporting}
+                  className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-gray-400">
+              {selectedTags.length === 0
+                ? 'None selected — exports everything'
+                : 'Items with any selected tag are included'}
+            </p>
+            <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+              {tags.map((item) => {
+                const active = selectedTags.includes(item);
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleTag(item)}
+                    disabled={exporting}
+                    className={
+                      'rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ' +
+                      (active
+                        ? 'bg-[#C9A86C] text-[#2C2417]'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200')
+                    }
+                  >
+                    #{item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {!isHighlight && (
@@ -103,7 +138,7 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
             <span className="text-sm text-gray-700">
               Include original image
               <span className="block text-xs text-gray-400">
-                When off, pages show OCR text instead
+                When off, pages show text instead
               </span>
             </span>
           </label>
