@@ -63,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
     url?: string;
     pageTitle?: string;
     timestamp?: number;
+    createdAt?: number;
   } | null>(null);
 
   // Update active action when initialData changes
@@ -159,6 +160,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
     }
   };
 
+  const handleEditHighlight = (highlight: Highlight): void => {
+    setActiveAction({
+      mode: 'highlight',
+      highlightId: highlight.id,
+      text: highlight.text,
+      color: highlight.color,
+      url: highlight.url,
+      pageTitle: highlight.pageTitle,
+      position: highlight.position,
+      createdAt: highlight.createdAt
+    });
+    setTitleInputValue(highlight.title || '');
+    setNoteInputValue(highlight.note || '');
+    setTagInputValue(
+      highlight.tags.filter((t) => t !== 'untagged').join(', ')
+    );
+    setLinkedIds(highlight.linkedIds || []);
+    setSubTab('new');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -211,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
           title: titleInputValue.trim() || undefined,
           note: noteInputValue.trim() || undefined,
           linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
-          createdAt: Date.now(),
+          createdAt: activeAction.createdAt || Date.now(),
           updatedAt: Date.now()
         };
 
@@ -307,7 +328,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
 
                 {/* Header */}
                 <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-gray-900">New Highlight</h3>
+                  <h3 className="font-semibold text-gray-900">{activeAction.highlightId ? 'Edit Highlight' : 'New Highlight'}</h3>
                   <button onClick={handleCancelAction} className="text-gray-400 hover:text-gray-700">
                     ✕
                   </button>
@@ -624,6 +645,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData }) => {
             <div className="p-4">
               <HighlightList
                 highlights={filteredHighlights}
+                onEdit={handleEditHighlight}
                 onDelete={handleDelete}
               />
             </div>
