@@ -472,23 +472,3 @@ if (!alreadyLoaded) {
     initialize();
   }
 }
-
-/**
- * Shadow DOM PoC (Development Only)
- * Temporarily added for Phase 1 testing
- * TODO: Remove after PoC validation
- */
-if (import.meta.env.DEV) {
-  import('./sidebar-shadow-poc.tsx').then(({ mountShadowPoc }) => {
-
-    // Keyboard shortcut to toggle PoC
-    document.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.altKey && e.shiftKey && e.key === 'P') {
-        e.preventDefault();
-        mountShadowPoc();
-      }
-    });
-  }).catch((error) => {
-    console.error('❌ Failed to load Shadow PoC:', error);
-  });
-}

@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.crxjs.ts",
-    "dev:legacy": "vite",
     "build": "tsc --noEmit && vite build --config vite.config.crxjs.ts && vite build --config vite.config.content.ts",
-    "build:legacy": "tsc --noEmit && tsx build-extension.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx",
     "preview": "vite preview",
@@ -39,9 +37,7 @@
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.13",
-    "tsx": "^4.20.6",
     "typescript": "^5.6.2",
-    "vite": "^7.1.11",
-    "vite-plugin-web-extension": "^4.4.5"
+    "vite": "^7.1.11"
   }
 }

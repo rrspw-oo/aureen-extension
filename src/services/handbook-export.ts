@@ -33,7 +33,6 @@ const L = {
   tocHeading: '目錄',
   source: '來源',
   note: '備註',
-  chapter: (n: number) => `第 ${n} 章`,
   captureFallback: (n: number) => `截圖 ${n}`,
   highlightFallback: (n: number) => `重點 ${n}`,
   ocrFailed: '此截圖的文字辨識失敗。',
@@ -64,12 +63,8 @@ interface HandbookItem {
   createdAt: number;
 }
 
-// A content page: one item. chapterIndex/chapterLabel are retained for the
-// page renderers but the flat handbook never sets a label.
 interface ContentPage {
   item: HandbookItem;
-  chapterIndex: number;
-  chapterLabel?: string;
 }
 
 export interface HandbookOptions {
@@ -190,12 +185,8 @@ function itemHtml(
   includeImage: boolean,
   tagColors: Map<string, string>
 ): string {
-  const { item, chapterIndex, chapterLabel } = page;
+  const { item } = page;
   const chips = item.tags.length ? tagChips(item.tags, tagColors) : '';
-
-  const chapterEyebrow = chapterLabel
-    ? `<div style="font-size:13px;font-weight:600;color:${ACCENT};letter-spacing:0.08em;margin-bottom:8px;">${L.chapter(chapterIndex)}　${escapeHtml(chapterLabel)}</div>`
-    : '';
 
   const showImage = shouldShowImage(item, includeImage);
   const imageBlock = showImage
@@ -224,7 +215,6 @@ function itemHtml(
 
   const inner = `
     <div style="margin-top:34px;flex:1;display:flex;flex-direction:column;overflow:hidden;">
-      ${chapterEyebrow}
       <div style="font-size:24px;font-weight:700;line-height:1.3;">${escapeHtml(item.heading)}</div>
       ${chips ? `<div style="margin-top:12px;">${chips}</div>` : ''}
       <div style="height:1px;background:${RULE};margin-top:16px;"></div>
@@ -246,7 +236,7 @@ function buildContentPages(items: HandbookItem[]): ContentPage[] {
   return items
     .slice()
     .sort((a, b) => a.createdAt - b.createdAt)
-    .map((item) => ({ item, chapterIndex: 1 }));
+    .map((item) => ({ item }));
 }
 
 function addTextPage(
@@ -254,7 +244,7 @@ function addTextPage(
   page: ContentPage,
   pageNumber: number
 ): void {
-  const { item, chapterIndex, chapterLabel } = page;
+  const { item } = page;
   const left = 56;
   const right = PAGE_WIDTH_PX - 56;
   const maxWidth = right - left;
@@ -272,13 +262,6 @@ function addTextPage(
   doc.text(String(pageNumber).padStart(2, '0'), right, y, { align: 'right' });
 
   y = 130;
-  if (chapterLabel) {
-    doc.setTextColor(201, 168, 108);
-    doc.setFontSize(13);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${L.chapter(chapterIndex)}  ${chapterLabel}`, left, y);
-    y += 28;
-  }
 
   doc.setTextColor(31, 31, 46);
   doc.setFontSize(24);
