@@ -289,7 +289,7 @@ const SidebarApp: React.FC = () => {
     if (!confirmed) return;
     const confirmed2 = confirm(t('shell.confirmDeleteAll2'));
     if (!confirmed2) return;
-    await storageService.clearAllData();
+    await storageService.clearHighlights();
   };
 
   const tabClass = (tab: TabType): string =>

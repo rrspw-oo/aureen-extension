@@ -238,21 +238,8 @@ class StorageService {
     }
   }
 
-  /**
-   * Clear all data (use with caution)
-   */
-  async clearAllData(): Promise<void> {
-    try {
-      await chrome.storage.local.clear();
-      await chrome.storage.sync.clear();
-    } catch (error) {
-      console.error('Error clearing data:', error);
-      throw new ExtensionError(
-        'Failed to clear storage data',
-        ErrorType.STORAGE_QUOTA_EXCEEDED,
-        error
-      );
-    }
+  async clearHighlights(): Promise<void> {
+    await chrome.storage.local.remove(['highlights', 'tags', 'globalTags']);
   }
 
   /**
