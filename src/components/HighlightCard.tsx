@@ -1,35 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LinkedItems, type LinkEntry, type LinkKind } from '@/components/LinkedItems';
-import { escapeHtml, sanitizeUrl } from '@/utils/security';
-import { COLORS } from '@/constants/theme';
-import { formatDate } from '@/utils/date';
-import { normalizePageUrl } from '@/utils/url';
-import type { Highlight } from '@/types';
+import { getRelativeTime } from '@/utils/date';
+import type { Highlight, HighlightColor } from '@/types';
+
+const MARK_TINT: Record<HighlightColor, { bg: string; line: string }> = {
+  yellow: { bg: '#F5E6BF', line: '#D9BC7E' },
+  mint: { bg: '#D3EEDD', line: '#86C29C' },
+  coral: { bg: '#F8D6D2', line: '#E09A92' },
+  peach: { bg: '#FBE3C8', line: '#E3AE73' },
+  lavender: { bg: '#E7DDF6', line: '#AE98D6' },
+  sky: { bg: '#D6E6F8', line: '#8FB3DE' }
+};
+
+const LONG_TEXT = 220;
 
 interface HighlightCardProps {
   highlight: Highlight;
   onEdit?: (highlight: Highlight) => void;
   onDelete?: (highlightId: string) => void;
-  showUrl?: boolean;
   links?: LinkEntry[];
   onNavigate?: (kind: LinkKind, id: string) => void;
   focused?: boolean;
+  onThisPage?: boolean;
 }
 
 export const HighlightCard: React.FC<HighlightCardProps> = ({
   highlight,
   onEdit,
   onDelete,
-  showUrl = true,
   links = [],
   onNavigate,
-  focused = false
+  focused = false,
+  onThisPage = false
 }) => {
-  const createdDate = formatDate(highlight.createdAt);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showLinks, setShowLinks] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const onThisPage = normalizePageUrl(highlight.url) === normalizePageUrl(window.location.href);
+  const cardRef = useRef<HTMLElement>(null);
+  const tint = MARK_TINT[highlight.color] ?? MARK_TINT.yellow;
+  const isLong = highlight.text.length > LONG_TEXT;
+  const tags = highlight.tags.filter((tag) => tag !== 'untagged');
 
   useEffect(() => {
     if (focused) {
@@ -37,209 +45,87 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
     }
   }, [focused]);
 
-  const displayText = isExpanded
-    ? highlight.text
-    : highlight.text.length > 50
-      ? highlight.text.slice(0, 50) + '...'
-      : highlight.text;
-
-  const handleEdit = (): void => { if (onEdit) onEdit(highlight); };
   const handleDelete = (): void => {
     if (onDelete && confirm('Are you sure you want to delete this highlight?')) onDelete(highlight.id);
   };
 
   return (
-    <div ref={cardRef} data-highlight-id={highlight.id} style={{
-      background: '#ffffff',
-      borderRadius: '14px',
-      overflow: 'hidden',
-      boxShadow: '0 4px 20px rgba(201,168,108,0.12), 0 1px 3px rgba(31,26,12,0.05)',
-      border: '1px solid #EFE7D8',
-      outline: focused ? `2px solid ${COLORS.accent}` : 'none',
-      outlineOffset: '2px',
-      transition: 'box-shadow 0.2s, transform 0.15s',
-    }}
-      className="highlight-card"
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(201,168,108,0.22), 0 2px 8px rgba(0,0,0,0.08)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.transform = '';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 24px rgba(201,168,108,0.15), 0 1px 4px rgba(0,0,0,0.06)';
-      }}
+    <article
+      ref={cardRef}
+      data-highlight-id={highlight.id}
+      className="bg-white border border-[#ECE4D4] rounded-xl p-3.5 flex flex-col gap-2.5"
+      style={{ outline: focused ? '2px solid #A9863F' : 'none', outlineOffset: '2px' }}
     >
-      {/* Title header */}
-      {highlight.title && (
-        <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #F0EADD', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p style={{ fontSize: '17px', fontWeight: 700, color: COLORS.goldChipText, lineHeight: 1.3, letterSpacing: '-0.01em', margin: 0 }}>
-            {highlight.title}
-          </p>
-          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-            {onEdit && (
-              <button onClick={handleEdit}
-                style={{ padding: '4px', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', color: '#c4c3d0', transition: 'background 0.15s, color 0.15s' }}
-                title="Edit"
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#374151'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#c4c3d0'; }}
-              >
-                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={handleDelete}
-                style={{ padding: '4px', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', color: '#c4c3d0', transition: 'background 0.15s, color 0.15s' }}
-                title="Delete"
-                onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#c4c3d0'; }}
-              >
-                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            )}
-          </div>
+      <div className="flex items-start justify-between gap-2">
+        {highlight.title ? (
+          <h3 className="m-0 text-[15px] font-semibold leading-snug text-[#1F1F2E] line-clamp-2">{highlight.title}</h3>
+        ) : (
+          <span className="text-[11px] text-[#6B6878] pt-0.5">{getRelativeTime(highlight.createdAt)}</span>
+        )}
+        <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1 -mt-1">
+          {highlight.title && <span className="text-[11px] text-[#6B6878] mr-1">{getRelativeTime(highlight.createdAt)}</span>}
+          {onEdit && (
+            <button
+              type="button"
+              title="Edit"
+              aria-label="Edit highlight"
+              onClick={() => onEdit(highlight)}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[#9A958A] hover:bg-[#F4F1EA] hover:text-[#1F1F2E]"
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              title="Delete"
+              aria-label="Delete highlight"
+              onClick={handleDelete}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-[#9A958A] hover:bg-[#FDF0EE] hover:text-[#B5533F]"
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          )}
         </div>
+      </div>
+
+      <p className={`m-0 text-sm leading-relaxed text-[#2E2A22] whitespace-pre-line ${isExpanded ? '' : 'line-clamp-4'}`}>
+        <span style={{ background: tint.bg, boxShadow: `inset 0 -2px 0 ${tint.line}`, padding: '1px 0' }}>{highlight.text}</span>
+      </p>
+      {isLong && (
+        <button type="button" onClick={() => setIsExpanded((v) => !v)} className="self-start -mt-1 text-xs font-medium text-[#7E5F25] hover:underline">
+          {isExpanded ? 'Less' : 'More'}
+        </button>
       )}
 
-      <div style={{ padding: highlight.title ? '12px 16px 14px' : '14px 16px 14px' }}>
+      {highlight.note && (
+        <p className="m-0 text-[13px] leading-normal text-[#5E5A4E] line-clamp-3">
+          <span className="font-semibold text-[#7E5F25]">Note </span>
+          {highlight.note}
+        </p>
+      )}
 
-        {/* Highlight bubble */}
-        <div
-          onClick={() => setIsExpanded(!isExpanded)}
-          style={{
-            background: '#F8F2E6',
-            borderRadius: '10px',
-            padding: '10px 12px',
-            marginBottom: '10px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(201,168,108,0.14)',
-            position: 'relative',
-            transition: 'opacity 0.15s',
-          }}
-          title={isExpanded ? 'Click to collapse' : 'Click to expand'}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          <span style={{
-            width: '7px', height: '7px', borderRadius: '50%',
-            background: COLORS.primary, display: 'inline-block',
-            marginRight: '6px', verticalAlign: 'middle', flexShrink: 0,
-          }} />
-          <span
-            style={{ fontSize: '13.5px', fontWeight: 500, color: '#4A3F2A', lineHeight: '1.55', whiteSpace: 'pre-line' }}
-            dangerouslySetInnerHTML={{ __html: escapeHtml(displayText) }}
-          />
-          {highlight.text.length > 50 && (
-            <p style={{ fontSize: '11px', color: '#B0A07A', marginTop: '5px', marginLeft: '13px' }}>
-              {isExpanded ? 'collapse' : 'expand'}
-            </p>
-          )}
-        </div>
+      {links.length > 0 && onNavigate && <LinkedItems links={links} onNavigate={onNavigate} />}
 
-        {/* Note */}
-        {highlight.note && (
-          <p style={{ fontSize: '12px', color: '#4b5563', lineHeight: '1.5', marginBottom: '11px', paddingLeft: '10px', borderLeft: `2px solid ${COLORS.accent}` }}>
-            {highlight.note}
-          </p>
-        )}
-
-        {/* Tags + actions (only when no title — actions are in header when title exists) */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', flex: 1 }}>
-            {highlight.tags.map((tag, index) => {
-              const displayTag = tag.startsWith('#') ? tag.slice(1) : tag;
-              return (
-                <span key={index} style={{
-                  display: 'inline-block', padding: '2px 8px', borderRadius: '9999px',
-                  fontSize: '11px', fontWeight: 600, backgroundColor: '#F4ECDD',
-                  color: '#9A7B43', letterSpacing: '0.01em',
-                }}>
-                  {escapeHtml(displayTag)}
-                </span>
-              );
-            })}
-            {links.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowLinks(v => !v)}
-                title={showLinks ? 'Hide linked items' : 'Show linked items'}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: COLORS.primary, background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', borderRadius: '6px' }}
-              >
-                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                {links.length}
-              </button>
-            )}
-          </div>
-
-          {!highlight.title && (
-            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-              {onEdit && (
-                <button onClick={handleEdit}
-                  style={{ padding: '6px', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', color: '#9ca3af', transition: 'background 0.15s, color 0.15s' }}
-                  title="Edit"
-                  onMouseEnter={e => { e.currentTarget.style.background = '#f3f4f6'; e.currentTarget.style.color = '#374151'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#9ca3af'; }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-              )}
-              {onDelete && (
-                <button onClick={handleDelete}
-                  style={{ padding: '6px', borderRadius: '6px', border: 'none', background: 'none', cursor: 'pointer', color: '#9ca3af', transition: 'background 0.15s, color 0.15s' }}
-                  title="Delete"
-                  onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#9ca3af'; }}
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {showLinks && links.length > 0 && onNavigate && (
-          <div style={{ marginTop: '10px' }}>
-            <LinkedItems links={links} onNavigate={onNavigate} />
-          </div>
-        )}
-
-        {/* Footer */}
-        {showUrl && (
-          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #F0EADD', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <a
-              href={sanitizeUrl(highlight.url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontSize: '11px', color: '#c4c3d0', textDecoration: 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 0.15s' }}
-              title={highlight.pageTitle}
-              onMouseEnter={e => (e.currentTarget.style.color = COLORS.primary)}
-              onMouseLeave={e => (e.currentTarget.style.color = '#c4c3d0')}
+      {(tags.length > 0 || onThisPage) && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {tags.map((tag) => (
+            <span key={tag} className="h-[22px] px-2 rounded-full bg-[#F4ECDD] text-[#6E5428] text-xs font-medium inline-flex items-center">
+              {tag}
+            </span>
+          ))}
+          {onThisPage && (
+            <button
+              type="button"
+              onClick={() => window.postMessage({ type: 'AUREEN_SCROLL_TO_HIGHLIGHT', highlightId: highlight.id }, '*')}
+              title="Scroll to this highlight on the page"
+              className="ml-auto h-7 px-2.5 rounded-md bg-[#FBF4E6] hover:bg-[#F4ECDD] text-[#6E5428] text-xs font-semibold"
             >
-              {escapeHtml(highlight.pageTitle)}
-            </a>
-            {onThisPage && (
-              <button
-                type="button"
-                onClick={() => window.postMessage({ type: 'AUREEN_SCROLL_TO_HIGHLIGHT', highlightId: highlight.id }, '*')}
-                title="Scroll to this highlight on the page"
-                style={{ fontSize: '11px', fontWeight: 600, color: COLORS.primary, background: '#FBF5EA', border: 'none', borderRadius: '6px', padding: '2px 8px', cursor: 'pointer', flexShrink: 0 }}
-              >
-                Show on page
-              </button>
-            )}
-            <span style={{ fontSize: '11px', color: '#c4c3d0', flexShrink: 0 }}>{createdDate}</span>
-          </div>
-        )}
-      </div>
-    </div>
+              Show on page
+            </button>
+          )}
+        </div>
+      )}
+    </article>
   );
 };

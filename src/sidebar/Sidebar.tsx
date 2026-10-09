@@ -1,20 +1,16 @@
-/**
- * Sidebar Component
- * Main sidebar interface for managing highlights
- */
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { storageService } from '@/services/storage';
 import { imageCaptureStorage } from '@/services/image-capture-storage';
-import { HighlightList } from './HighlightList';
-import { Button } from '@/components/Button';
-import { COLORS } from '@/constants/theme';
-import { TagInput, withPendingTag } from '@/components/TagInput';
+import { HighlightList, type HighlightGroup } from './HighlightList';
+import { HighlightForm, type HighlightFormFields } from './HighlightForm';
+import { SearchField } from '@/components/SearchField';
+import { TagChipRow } from '@/components/TagChipRow';
+import { StorageMeter } from '@/components/StorageMeter';
 import { resolveLinks, type LinkKind } from '@/components/LinkedItems';
-import type { Highlight, Tag } from '@/types';
+import { normalizePageUrl } from '@/utils/url';
+import { resetCaptureData } from '@/content/sidebar-shadow';
+import type { Highlight, HighlightColor, HighlightPosition } from '@/types';
 import type { ImageCapture } from '@/types/image-capture';
-
-type SortBy = 'date' | 'tag';
 
 interface SidebarProps {
   initialData?: Record<string, unknown>;
@@ -23,100 +19,68 @@ interface SidebarProps {
   onFocusHandled?: () => void;
 }
 
+interface HighlightAction {
+  text: string;
+  url: string;
+  pageTitle: string;
+  highlightId?: string;
+  position?: HighlightPosition;
+  color?: HighlightColor;
+  createdAt?: number;
+  focusNote?: boolean;
+  isEdit: boolean;
+  initial: HighlightFormFields;
+}
+
+const EMPTY_FIELDS: HighlightFormFields = { title: '', note: '', tags: [], linkedIds: [] };
+
 export const Sidebar: React.FC<SidebarProps> = ({ initialData, focusHighlightId, onNavigate, onFocusHandled }) => {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
-  const [filteredHighlights, setFilteredHighlights] = useState<Highlight[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [loading, setLoading] = useState(true);
-  const [showTagFilter, setShowTagFilter] = useState(false);
-  const [showSortOptions, setShowSortOptions] = useState(false);
-  const [formTags, setFormTags] = useState<string[]>([]);
-  const [pendingTag, setPendingTag] = useState('');
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const [noteInputValue, setNoteInputValue] = useState('');
-  const [titleInputValue, setTitleInputValue] = useState('');
-
-  // Linked items picker
   const [allCaptures, setAllCaptures] = useState<ImageCapture[]>([]);
-  const [linkedIds, setLinkedIds] = useState<string[]>([]);
-  const [showLinkedPicker, setShowLinkedPicker] = useState(false);
-  const [linkedSearch, setLinkedSearch] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [action, setAction] = useState<HighlightAction | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
 
-
-  // Sub-tab state
-  const [subTab, setSubTab] = useState<'new' | 'saved'>('saved');
-
-  // Active action state (from content script)
-  const [activeAction, setActiveAction] = useState<{
-    mode?: 'highlight' | 'capture';
-    // Highlight fields
-    text?: string;
-    highlightId?: string;
-    position?: {
-      startOffset: number;
-      endOffset: number;
-      xpath: string;
-      textContent: string;
-    };
-    color?: string;
-    // Capture fields
-    captureId?: string;
-    imageData?: string;
-    // Common fields
-    url?: string;
-    pageTitle?: string;
-    timestamp?: number;
-    createdAt?: number;
-  } | null>(null);
-
-  // Update active action when initialData changes
   useEffect(() => {
-    if (initialData && Object.keys(initialData).length > 0) {
-      setActiveAction(initialData as typeof activeAction);
-      setFormTags([]);
-      setNoteInputValue('');
-      setTitleInputValue('');
-      setLinkedIds([]);
-      setLinkedSearch('');
-      setShowLinkedPicker(false);
-
-      // Handle sub-tab navigation from initialData
-      if (initialData.subTab) {
-        setSubTab(initialData.subTab as 'new' | 'saved');
-      } else if (initialData.mode !== 'capture') {
-        // Auto-switch to New tab when new highlight is detected
-        setSubTab('new');
-      }
+    if (initialData?.mode === 'highlight' && typeof initialData.text === 'string') {
+      setAction({
+        text: initialData.text,
+        url: (initialData.url as string) || window.location.href,
+        pageTitle: (initialData.pageTitle as string) || document.title,
+        highlightId: initialData.highlightId as string | undefined,
+        position: initialData.position as HighlightPosition | undefined,
+        color: initialData.color as HighlightColor | undefined,
+        focusNote: Boolean(initialData.focusNote),
+        isEdit: false,
+        initial: EMPTY_FIELDS
+      });
     }
   }, [initialData]);
 
   useEffect(() => {
+    const loadData = async (): Promise<void> => {
+      const [allHighlights, captures] = await Promise.all([
+        storageService.getAllHighlights(),
+        imageCaptureStorage.getAllCaptures()
+      ]);
+      setHighlights(Object.values(allHighlights));
+      setAllCaptures(captures);
+      setLoaded(true);
+    };
     loadData();
-
-    const handleStorageChange = (): void => {
-      loadData();
-    };
-
-    chrome.storage.onChanged.addListener(handleStorageChange);
-
-    return () => {
-      chrome.storage.onChanged.removeListener(handleStorageChange);
-    };
+    chrome.storage.onChanged.addListener(loadData);
+    return () => chrome.storage.onChanged.removeListener(loadData);
   }, []);
 
   useEffect(() => {
-    applyFiltersAndSort();
-  }, [highlights, selectedTags, sortBy]);
-
-  useEffect(() => {
-    if (!focusHighlightId || loading) return;
-    setSubTab('saved');
+    if (!focusHighlightId || !loaded) return;
     setSelectedTags([]);
+    setQuery('');
     setFocusedId(focusHighlightId);
     onFocusHandled?.();
-  }, [focusHighlightId, loading]);
+  }, [focusHighlightId, loaded]);
 
   useEffect(() => {
     if (!focusedId) return;
@@ -124,535 +88,178 @@ export const Sidebar: React.FC<SidebarProps> = ({ initialData, focusHighlightId,
     return () => clearTimeout(timer);
   }, [focusedId]);
 
-  const loadData = async (): Promise<void> => {
-    try {
-      setLoading(true);
-
-      const [allHighlights, allTags, captures] = await Promise.all([
-        storageService.getAllHighlights(),
-        storageService.getAllTags(),
-        imageCaptureStorage.getAllCaptures()
-      ]);
-
-      setHighlights(Object.values(allHighlights));
-      setTags(Object.values(allTags));
-      setAllCaptures(captures);
-    } catch (error) {
-      console.error('Error loading sidebar data:', error);
-    } finally {
-      setLoading(false);
+  const tagSummaries = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const highlight of highlights) {
+      for (const tag of highlight.tags) {
+        if (tag !== 'untagged') counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
     }
-  };
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }, [highlights]);
 
-  const applyFiltersAndSort = (): void => {
-    let filtered = [...highlights];
-
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter((highlight) =>
-        highlight.tags.some((tag) => selectedTags.includes(tag))
-      );
+  const recentTags = useMemo(() => {
+    const seen: string[] = [];
+    for (const highlight of [...highlights].sort((a, b) => b.createdAt - a.createdAt)) {
+      for (const tag of highlight.tags) {
+        if (tag !== 'untagged' && !seen.includes(tag)) seen.push(tag);
+      }
     }
+    return seen;
+  }, [highlights]);
 
-    switch (sortBy) {
-      case 'date':
-        filtered.sort((a, b) => b.createdAt - a.createdAt);
-        break;
-      case 'tag':
-        filtered.sort((a, b) => {
-          const tagA = a.tags[0] || '';
-          const tagB = b.tags[0] || '';
-          return tagA.localeCompare(tagB);
-        });
-        break;
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return highlights.filter((highlight) => {
+      if (selectedTags.length > 0 && !highlight.tags.some((tag) => selectedTags.includes(tag))) return false;
+      if (!q) return true;
+      return `${highlight.text} ${highlight.title ?? ''} ${highlight.note ?? ''} ${highlight.tags.join(' ')}`.toLowerCase().includes(q);
+    });
+  }, [highlights, selectedTags, query]);
+
+  const groups = useMemo(() => {
+    const pageUrl = normalizePageUrl(window.location.href);
+    const byKey = new Map<string, HighlightGroup>();
+    for (const highlight of [...filtered].sort((a, b) => b.createdAt - a.createdAt)) {
+      const key = normalizePageUrl(highlight.url);
+      const group = byKey.get(key);
+      if (group) {
+        group.items.push(highlight);
+      } else {
+        byKey.set(key, { key, url: highlight.url, title: highlight.pageTitle, isCurrentPage: key === pageUrl, items: [highlight] });
+      }
     }
-
-    setFilteredHighlights(filtered);
-  };
+    return [...byKey.values()].sort((a, b) => {
+      if (a.isCurrentPage !== b.isCurrentPage) return a.isCurrentPage ? -1 : 1;
+      return b.items[0].createdAt - a.items[0].createdAt;
+    });
+  }, [filtered]);
 
   const handleDelete = async (highlightId: string): Promise<void> => {
-    try {
-      await storageService.deleteHighlight(highlightId);
-      await loadData();
-    } catch (error) {
-      console.error('Error deleting highlight:', error);
-      alert('Failed to delete highlight. Please try again.');
-    }
+    await storageService.deleteHighlight(highlightId);
   };
 
   const handleEditHighlight = (highlight: Highlight): void => {
-    setActiveAction({
-      mode: 'highlight',
-      highlightId: highlight.id,
+    setAction({
       text: highlight.text,
-      color: highlight.color,
       url: highlight.url,
       pageTitle: highlight.pageTitle,
+      highlightId: highlight.id,
       position: highlight.position,
-      createdAt: highlight.createdAt
+      color: highlight.color,
+      createdAt: highlight.createdAt,
+      isEdit: true,
+      initial: {
+        title: highlight.title ?? '',
+        note: highlight.note ?? '',
+        tags: highlight.tags.filter((tag) => tag !== 'untagged'),
+        linkedIds: highlight.linkedIds ?? []
+      }
     });
-    setTitleInputValue(highlight.title || '');
-    setNoteInputValue(highlight.note || '');
-    setFormTags(highlight.tags.filter((t) => t !== 'untagged'));
-    setLinkedIds(highlight.linkedIds || []);
-    setSubTab('new');
   };
 
-  if (loading) {
+  const closeSheet = (): void => {
+    setAction(null);
+    resetCaptureData();
+  };
+
+  const handleCancel = (): void => {
+    if (action && !action.isEdit && action.highlightId) {
+      window.postMessage({ type: 'AUREEN_REMOVE_HIGHLIGHT', highlightId: action.highlightId }, '*');
+    }
+    closeSheet();
+  };
+
+  const handleSave = async (fields: HighlightFormFields): Promise<void> => {
+    if (!action) return;
+    const highlight: Highlight = {
+      id: action.highlightId || `highlight_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+      url: action.url,
+      pageTitle: action.pageTitle,
+      text: action.text,
+      tags: fields.tags.length > 0 ? fields.tags : ['untagged'],
+      color: action.color || 'yellow',
+      position: action.position || { startOffset: 0, endOffset: 0, xpath: '', textContent: action.text },
+      title: fields.title.trim() || undefined,
+      note: fields.note.trim() || undefined,
+      linkedIds: fields.linkedIds.length > 0 ? fields.linkedIds : undefined,
+      createdAt: action.createdAt || Date.now(),
+      updatedAt: Date.now()
+    };
+    try {
+      await storageService.saveHighlight(highlight);
+      await storageService.bumpGlobalTags(highlight.tags);
+      closeSheet();
+    } catch (error) {
+      console.error('Error saving highlight:', error);
+      alert('Failed to save highlight. Please try again.');
+    }
+  };
+
+  if (!loaded) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-400 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading highlights...</p>
-        </div>
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#C9A86C]" />
       </div>
     );
   }
 
-  const handleSave = async (inputTags: string[]): Promise<void> => {
-    if (!activeAction) return;
-
-    try {
-      if (activeAction.mode === 'capture') {
-        // Save capture
-        if (!activeAction.imageData) return;
-
-        const capture: ImageCapture = {
-          id: activeAction.captureId || `capture_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-          imageData: activeAction.imageData,
-          url: activeAction.url || window.location.href,
-          tags: inputTags.length > 0 ? inputTags : [],
-          note: noteInputValue.trim(),
-          title: titleInputValue.trim() || undefined,
-          linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
-          createdAt: activeAction.timestamp || Date.now()
-        };
-
-        await imageCaptureStorage.saveCapture(capture);
-        showSuccessMessage('Screenshot saved!');
-      } else {
-        // Save highlight
-        if (!activeAction.text) return;
-
-        const highlight: Highlight = {
-          id: activeAction.highlightId || `highlight_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-          url: activeAction.url || window.location.href,
-          pageTitle: activeAction.pageTitle || document.title,
-          text: activeAction.text,
-          tags: inputTags.length > 0 ? inputTags : ['untagged'],
-          color: (activeAction.color as any) || 'yellow',
-          position: activeAction.position || {
-            startOffset: 0,
-            endOffset: 0,
-            xpath: '',
-            textContent: activeAction.text
-          },
-          title: titleInputValue.trim() || undefined,
-          note: noteInputValue.trim() || undefined,
-          linkedIds: linkedIds.length > 0 ? linkedIds : undefined,
-          createdAt: activeAction.createdAt || Date.now(),
-          updatedAt: Date.now()
-        };
-
-        await storageService.saveHighlight(highlight);
-        await storageService.bumpGlobalTags(highlight.tags);
-        showSuccessMessage('Highlight saved!');
-      }
-
-      await loadData();
-      setActiveAction(null);
-      setFormTags([]);
-      setNoteInputValue('');
-      setTitleInputValue('');
-      setLinkedIds([]);
-      setLinkedSearch('');
-      setShowLinkedPicker(false);
-      setSubTab('saved');
-    } catch (error) {
-      console.error('Error saving:', error);
-      alert(`Failed to save ${activeAction.mode === 'capture' ? 'screenshot' : 'highlight'}. Please try again.`);
-    }
-  };
-
-
-  const showSuccessMessage = (message: string): void => {
-    const successMsg = document.createElement('div');
-    successMsg.textContent = message;
-    successMsg.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #10b981;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 2147483647;
-      font-family: system-ui, -apple-system, sans-serif;
-    `;
-    document.body.appendChild(successMsg);
-    setTimeout(() => successMsg.remove(), 2000);
-  };
-
-  const handleCancelAction = async (): Promise<void> => {
-    if (activeAction?.highlightId) {
-      // Remove highlight from page (not from storage since it's not saved yet)
-      try {
-        // Notify content script to remove highlight from page via window message
-        window.postMessage({
-          type: 'AUREEN_REMOVE_HIGHLIGHT',
-          highlightId: activeAction.highlightId
-        }, '*');
-      } catch (error) {
-        console.error('Failed to remove temporary highlight:', error);
-      }
-    }
-    setActiveAction(null);
-  };
-
   return (
-    <div className="flex flex-col h-screen bg-white font-sans antialiased">
-      {/* Sub Tabs */}
-      <div className="flex border-b border-gray-200 bg-gray-50">
-        <button
-          onClick={() => setSubTab('new')}
-          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-            subTab === 'new'
-              ? 'text-gray-900 border-b-2 border-gray-700'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          New
-        </button>
-        <button
-          onClick={() => setSubTab('saved')}
-          className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-            subTab === 'saved'
-              ? 'text-gray-900 border-b-2 border-gray-700'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Saved
-        </button>
-      </div>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto">
-        {subTab === 'new' ? (
-          /* New Highlight Tab */
-          activeAction && activeAction.mode !== 'capture' ? (
-            <div
-              className="p-4 bg-gray-50"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  handleSave(withPendingTag(formTags, pendingTag));
-                }
-              }}
-            >
-              <div className="space-y-3">
-
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-gray-900">{activeAction.highlightId ? 'Edit Highlight' : 'New Highlight'}</h3>
-                  <button onClick={handleCancelAction} className="text-gray-400 hover:text-gray-700">
-                    ✕
-                  </button>
-                </div>
-
-                {/* Selected text preview */}
-                <div className="bg-[#F8F2E6] border-l-4 border-[#E0D6C2] p-3 rounded-r">
-                  <p className="text-sm text-gray-700 line-clamp-3">{activeAction.text}</p>
-                </div>
-
-                {/* Title */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
-                    Title <span className="text-gray-400 font-normal normal-case">(optional)</span>
-                  </label>
-                  <p className="text-xs text-gray-400 mb-1.5">Card heading and PDF handbook page title. Defaults to the web page title.</p>
-                  <input
-                    type="text"
-                    value={titleInputValue}
-                    onChange={(e) => setTitleInputValue(e.target.value)}
-                    placeholder="e.g. Key concept from lecture 3"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm"
-                  />
-                </div>
-
-                {/* Tags */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
-                    Tags
-                  </label>
-                  <p className="text-xs text-gray-400 mb-1.5">Used to filter the sidebar and to choose what goes into an export.</p>
-                  <TagInput
-                    key={activeAction.highlightId}
-                    tags={formTags}
-                    onChange={setFormTags}
-                    onSubmit={(next) => handleSave(next)}
-                    onPendingChange={setPendingTag}
-                    suggestions={tags.map((tag) => ({ name: tag.name.startsWith('#') ? tag.name.slice(1) : tag.name }))}
-                    label={null}
-                    hint="Press Enter to add a tag. Click Save when done."
-                    placeholder="e.g. important, research, todo"
-                    maxTags={Infinity}
-                  />
-                </div>
-
-                {/* Note */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
-                    Notes <span className="text-gray-400 font-normal normal-case">(optional)</span>
-                  </label>
-                  <p className="text-xs text-gray-400 mb-1.5">Shown on the card and in the PDF handbook.</p>
-                  <textarea
-                    value={noteInputValue}
-                    onChange={(e) => setNoteInputValue(e.target.value)}
-                    placeholder="Study notes, thoughts, or context about this highlight..."
-                    rows={3}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E0CFA0] focus:border-[#C9A86C] text-sm resize-none"
-                  />
-                </div>
-
-                {/* Linked items */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowLinkedPicker(v => !v)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide hover:text-[#9A7B43] transition-colors"
-                  >
-                    <span>{showLinkedPicker ? '▾' : '▸'}</span>
-                    Link to existing items
-                    {linkedIds.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-[#F4ECDD] text-[#9A7B43] rounded-full text-xs font-bold">
-                        {linkedIds.length}
-                      </span>
-                    )}
-                  </button>
-
-                  <p className="text-xs text-gray-400 mt-1">Connect related highlights or screenshots. Each side lists the other and you can jump between them.</p>
-
-                  {showLinkedPicker && (
-                    <div className="mt-2 border border-gray-200 rounded-lg bg-white overflow-hidden">
-                      <div className="p-2 border-b border-gray-100">
-                        <input
-                          type="text"
-                          value={linkedSearch}
-                          onChange={(e) => setLinkedSearch(e.target.value)}
-                          placeholder="Search highlights or captures..."
-                          className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#E0CFA0]"
-                        />
-                      </div>
-                      <div className="max-h-48 overflow-y-auto">
-                        {/* Existing highlights */}
-                        {highlights
-                          .filter(h => h.id !== activeAction?.highlightId)
-                          .filter(h => {
-                            const q = linkedSearch.toLowerCase();
-                            return !q || h.text.toLowerCase().includes(q) || (h.title || '').toLowerCase().includes(q) || h.tags.join(' ').toLowerCase().includes(q);
-                          })
-                          .slice(0, 10)
-                          .map(h => (
-                            <label key={h.id} className="flex items-start gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={linkedIds.includes(h.id)}
-                                onChange={(e) => {
-                                  setLinkedIds(prev => e.target.checked ? [...prev, h.id] : prev.filter(id => id !== h.id));
-                                }}
-                                className="mt-0.5 flex-shrink-0"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-[#9A7B43] truncate">
-                                  {h.title || h.text.slice(0, 40)}
-                                </p>
-                                {h.tags.length > 0 && (
-                                  <p className="text-xs text-gray-400">{h.tags.slice(0,3).join(', ')}</p>
-                                )}
-                              </div>
-                            </label>
-                          ))}
-                        {/* Saved captures */}
-                        {allCaptures
-                          .filter(c => {
-                            const q = linkedSearch.toLowerCase();
-                            return !q || (c.title || '').toLowerCase().includes(q) || c.note.toLowerCase().includes(q) || c.tags.join(' ').toLowerCase().includes(q);
-                          })
-                          .slice(0, 6)
-                          .map(c => (
-                            <label key={c.id} className="flex items-start gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={linkedIds.includes(c.id)}
-                                onChange={(e) => {
-                                  setLinkedIds(prev => e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id));
-                                }}
-                                className="mt-0.5 flex-shrink-0"
-                              />
-                              <div className="flex items-center gap-2 min-w-0">
-                                <img src={c.imageData} alt="" className="w-8 h-6 object-cover rounded flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-xs font-medium text-[#9A7B43] truncate">
-                                    {c.title || 'Screenshot'}
-                                  </p>
-                                  {c.tags.length > 0 && (
-                                    <p className="text-xs text-gray-400">{c.tags.slice(0,3).join(', ')}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </label>
-                          ))}
-                        {highlights.filter(h => h.id !== activeAction?.highlightId).length === 0 && allCaptures.length === 0 && (
-                          <p className="px-3 py-4 text-xs text-gray-400 text-center">No saved items yet</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Save */}
-                <Button
-                  onClick={() => handleSave(withPendingTag(formTags, pendingTag))}
-                  variant="primary"
-                  fullWidth
-                  className="mt-1"
-                >
-                  Save Highlight
-                </Button>
-                <p className="text-xs text-gray-400 text-center">Shortcut: Cmd/Ctrl + Enter</p>
-
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <svg
-                  className="mx-auto h-16 w-16 text-gray-400 mb-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <p className="text-gray-500 mb-2">No new highlight</p>
-                <p className="text-sm text-gray-400">
-                  Select text on the page to create a highlight
-                </p>
-              </div>
-            </div>
-          )
-        ) : (
-          /* Saved Highlights Tab */
-          <>
-            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
-              <div className="px-4 py-2">
-                {!showSortOptions ? (
-                  <button
-                    onClick={() => setShowSortOptions(true)}
-                    className="w-full px-3 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                  >
-                    Sort by
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSortBy('date');
-                        setSelectedTags([]);
-                        setShowSortOptions(false);
-                      }}
-                      className="flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-                      style={{
-                        backgroundColor: sortBy === 'date' && selectedTags.length === 0 ? COLORS.primary : COLORS.gray100,
-                        color: sortBy === 'date' && selectedTags.length === 0 ? COLORS.textPrimary : COLORS.gray700
-                      }}
-                    >
-                      Date
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSortBy('tag');
-                        setShowTagFilter(!showTagFilter);
-                      }}
-                      className="flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-                      style={{
-                        backgroundColor: showTagFilter || selectedTags.length > 0 ? COLORS.primary : COLORS.gray100,
-                        color: showTagFilter || selectedTags.length > 0 ? COLORS.textPrimary : COLORS.gray700
-                      }}
-                    >
-                      Tag {selectedTags.length > 0 && `(${selectedTags.length})`}
-                    </button>
-                  </div>
-                )}
-
-                {showTagFilter && tags.length > 0 && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-gray-700">Select tags to filter:</p>
-                      <button
-                        onClick={() => setSelectedTags([])}
-                        className="text-xs text-gray-600 hover:text-gray-800 font-medium"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                      {tags.map((tag) => {
-                        const displayName = tag.name.startsWith('#') ? tag.name.slice(1) : tag.name;
-                        return (
-                          <button
-                            key={tag.name}
-                            onClick={() => {
-                              if (selectedTags.includes(tag.name)) {
-                                setSelectedTags(selectedTags.filter(t => t !== tag.name));
-                              } else {
-                                setSelectedTags([...selectedTags, tag.name]);
-                              }
-                            }}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all"
-                            style={{
-                              backgroundColor: selectedTags.includes(tag.name) ? COLORS.primary : COLORS.white,
-                              color: selectedTags.includes(tag.name) ? COLORS.textPrimary : COLORS.gray700,
-                              border: selectedTags.includes(tag.name) ? 'none' : `1px solid ${COLORS.gray300}`
-                            }}
-                          >
-                            <span>{displayName}</span>
-                            <span
-                              className="text-xs px-2 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: selectedTags.includes(tag.name) ? COLORS.primaryHover : COLORS.gray200
-                              }}
-                            >
-                              {tag.highlightCount}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="p-4">
-              <HighlightList
-                highlights={filteredHighlights}
-                onEdit={handleEditHighlight}
-                onDelete={handleDelete}
-                getLinks={(h) => resolveLinks(h.id, h.linkedIds, highlights, allCaptures)}
-                onNavigate={onNavigate}
-                focusedId={focusedId}
-              />
-            </div>
-          </>
+    <div className="flex flex-col h-full">
+      <div className="px-4 pt-2.5 flex flex-col gap-2.5 flex-shrink-0">
+        <SearchField value={query} onChange={setQuery} placeholder="Search text, notes, titles" />
+        {tagSummaries.length > 0 && (
+          <TagChipRow tags={tagSummaries} total={highlights.length} selected={selectedTags} onChange={setSelectedTags} />
         )}
       </div>
 
+      <main className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4">
+        {highlights.length === 0 ? (
+          <div className="text-center py-12 px-6">
+            <p className="text-[#1F1F2E] font-medium mb-1">No highlights yet</p>
+            <p className="text-sm text-[#6B6878]">Select text on any page and choose Highlight in the toolbar that appears.</p>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="text-center py-12 px-6">
+            <p className="text-[#1F1F2E] font-medium mb-1">No highlights match</p>
+            <button type="button" onClick={() => { setQuery(''); setSelectedTags([]); }} className="text-sm text-[#7E5F25] underline">
+              Clear search and filters
+            </button>
+          </div>
+        ) : (
+          <HighlightList
+            groups={groups}
+            onEdit={handleEditHighlight}
+            onDelete={handleDelete}
+            getLinks={(highlight) => resolveLinks(highlight.id, highlight.linkedIds, highlights, allCaptures)}
+            onNavigate={onNavigate}
+            focusedId={focusedId}
+          />
+        )}
+      </main>
+
+      <footer className="h-10 flex-shrink-0 px-4 flex items-center justify-between border-t border-[#ECE4D4] bg-white text-xs text-[#6B6878]">
+        <span>{filtered.length} of {highlights.length} highlights</span>
+        <StorageMeter />
+      </footer>
+
+      {action && (
+        <HighlightForm
+          key={action.highlightId ?? action.text}
+          isEdit={action.isEdit}
+          selfId={action.highlightId}
+          text={action.text}
+          pageUrl={action.url}
+          initial={action.initial}
+          focusNote={Boolean(action.focusNote)}
+          suggestions={tagSummaries.map((tag) => tag.name)}
+          recentTags={recentTags}
+          highlights={highlights}
+          captures={allCaptures}
+          onSave={handleSave}
+          onCancel={handleCancel}
+        />
+      )}
     </div>
   );
 };

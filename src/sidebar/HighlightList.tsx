@@ -1,69 +1,65 @@
-/**
- * HighlightList Component
- * Displays a list of highlights
- */
-
 import React from 'react';
 import { HighlightCard } from '@/components/HighlightCard';
 import type { Highlight } from '@/types';
 import type { LinkEntry, LinkKind } from '@/components/LinkedItems';
 
-interface HighlightListProps {
-  highlights: Highlight[];
-  onEdit?: (highlight: Highlight) => void;
-  onDelete?: (highlightId: string) => void;
-  getLinks?: (highlight: Highlight) => LinkEntry[];
-  onNavigate?: (kind: LinkKind, id: string) => void;
-  focusedId?: string | null;
+export interface HighlightGroup {
+  key: string;
+  url: string;
+  title: string;
+  isCurrentPage: boolean;
+  items: Highlight[];
 }
 
-export const HighlightList: React.FC<HighlightListProps> = ({
-  highlights,
-  onEdit,
-  onDelete,
-  getLinks,
-  onNavigate,
-  focusedId
-}) => {
+interface HighlightListProps {
+  groups: HighlightGroup[];
+  onEdit: (highlight: Highlight) => void;
+  onDelete: (highlightId: string) => void;
+  getLinks: (highlight: Highlight) => LinkEntry[];
+  onNavigate?: (kind: LinkKind, id: string) => void;
+  focusedId: string | null;
+}
 
-  if (highlights.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <svg
-          className="w-16 h-16 text-gray-300 mx-auto mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <p className="text-gray-500 font-medium mb-1">No highlights found</p>
-        <p className="text-sm text-gray-400">
-          Select text on any webpage to create highlights
-        </p>
-      </div>
-    );
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
   }
+}
 
-  return (
-    <div className="space-y-3">
-      {highlights.map((highlight) => (
-        <HighlightCard
-          key={highlight.id}
-          highlight={highlight}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          showUrl={true}
-          links={getLinks ? getLinks(highlight) : []}
-          onNavigate={onNavigate}
-          focused={focusedId === highlight.id}
-        />
-      ))}
-    </div>
-  );
-};
+export const HighlightList: React.FC<HighlightListProps> = ({ groups, onEdit, onDelete, getLinks, onNavigate, focusedId }) => (
+  <div className="flex flex-col gap-4">
+    {groups.map((group) => {
+      const host = hostOf(group.url);
+      return (
+        <section key={group.key} className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2 px-0.5">
+            <span className="w-5 h-5 rounded-[5px] bg-[#EEE7DA] text-[#6E5428] text-[11px] font-semibold flex items-center justify-center flex-shrink-0">
+              {(host[0] ?? '#').toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold truncate text-[#1F1F2E]">{group.title || host || group.url}</div>
+              <div className="text-[11px] text-[#6B6878] truncate">
+                {host || group.url} · {group.items.length} {group.items.length === 1 ? 'highlight' : 'highlights'}
+                {group.isCurrentPage && <span className="text-[#7E5F25] font-semibold"> · this page</span>}
+              </div>
+            </div>
+          </div>
+          {group.items.map((highlight) => (
+            <HighlightCard
+              key={highlight.id}
+              highlight={highlight}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              links={getLinks(highlight)}
+              onNavigate={onNavigate}
+              focused={focusedId === highlight.id}
+              onThisPage={group.isCurrentPage}
+            />
+          ))}
+        </section>
+      );
+    })}
+  </div>
+);
