@@ -7,7 +7,7 @@ interface SearchFieldProps {
 }
 
 export const SearchField: React.FC<SearchFieldProps> = ({ value, onChange, placeholder }) => (
-  <label className="flex-1 h-[38px] flex items-center gap-2 px-3 bg-white border border-[#E2D8C4] rounded-[9px] focus-within:border-[#C9A86C]">
+  <label className="w-full h-[38px] flex-shrink-0 flex items-center gap-2 px-3 bg-white border border-[#E2D8C4] rounded-[9px] focus-within:border-[#C9A86C]">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A7568" strokeWidth="2" strokeLinecap="round">
       <circle cx="11" cy="11" r="6.5" />
       <path d="M20 20l-4-4" />
