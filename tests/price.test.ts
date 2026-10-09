@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPrice } from '../src/utils/price.ts';
+import { extractPrice, parsePriceInput } from '../src/utils/price.ts';
 
 test('NT$ with thousands separator', () => {
   assert.deepEqual(extractPrice('Desk lamp NT$1,290 free shipping'), { amount: 1290, label: 'NT$1,290' });
@@ -19,4 +19,14 @@ test('full-width dollar sign', () => {
 });
 test('no currency marker returns null', () => {
   assert.equal(extractPrice('Model 2024 with 3 modes'), null);
+});
+
+test('parse bare number as NT$', () => {
+  assert.deepEqual(parsePriceInput('1290'), { amount: 1290, label: 'NT$1,290' });
+});
+test('parse labelled input keeps its label', () => {
+  assert.deepEqual(parsePriceInput('US$ 19.99'), { amount: 19.99, label: 'US$ 19.99' });
+});
+test('parse rejects text without a number', () => {
+  assert.equal(parsePriceInput('cheap'), null);
 });
