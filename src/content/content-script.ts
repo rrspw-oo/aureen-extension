@@ -5,10 +5,10 @@
 
 import { injectHighlightStyles, isValidSelection } from '@/utils/dom-helpers';
 import { initContentApp } from './content-app';
-import { toggleSidebarShadow, mountSidebarWithShadow } from './sidebar-shadow';
+import { toggleSidebarShadow, mountSidebarWithShadow, isSidebarVisible, hideSidebarShadow } from './sidebar-shadow';
 import { highlighter } from './highlighter';
 import { startScreenshotCapture } from './screenshot-capture-handler';
-import { showFab } from './fab-bridge';
+import { showFab, isFabVisible } from './fab-bridge';
 import type { Highlight } from '@/types';
 
 declare global {
@@ -428,8 +428,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       toggleSidebar();
       break;
 
-    case 'show-fab':
-      showFab();
+    case 'toggle-ui':
+      if (isSidebarVisible() || isFabVisible()) {
+        hideSidebarShadow();
+      } else {
+        showFab();
+      }
       break;
 
     case 'toggle-highlight-mode':

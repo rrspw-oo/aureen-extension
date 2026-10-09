@@ -98,6 +98,10 @@ export function mountSidebarWithShadow(data?: Record<string, unknown>): void {
   setTimeout(() => sendDataToSidebar(), 100);
 }
 
+export function isSidebarVisible(): boolean {
+  return !!shadowHost && shadowHost.style.display !== 'none';
+}
+
 /**
  * Hide sidebar
  */
@@ -280,9 +284,11 @@ const SidebarApp: React.FC = () => {
     }
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        hideSidebarShadow();
-      }
+      if (event.key !== 'Escape' || event.isComposing) return;
+      const origin = event.composedPath()[0] as HTMLElement | undefined;
+      if (origin && (origin.tagName === 'INPUT' || origin.tagName === 'TEXTAREA' || origin.isContentEditable)) return;
+      if (shadowRoot?.querySelector('[data-aureen-modal]')) return;
+      hideSidebarShadow();
     };
 
     if (shadowRoot) {

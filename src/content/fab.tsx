@@ -110,6 +110,18 @@ const ITEMS = [
       </svg>
     ),
   },
+  {
+    label: 'Hide',
+    color: '#8A8578',
+    bg: 'linear-gradient(135deg, #B5AFA2 0%, #8A8578 100%)',
+    shadow: 'rgba(90,85,75,0.35)',
+    action: 'hide',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <path d="M5 5l10 10M15 5L5 15" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
 ];
 
 const FAB_SIZE = 56;

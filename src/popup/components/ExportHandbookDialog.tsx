@@ -69,6 +69,7 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
 
   return (
     <div
+      data-aureen-modal
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       onClick={exporting ? undefined : onClose}
     >

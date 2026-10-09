@@ -411,6 +411,6 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!ready) {
     return;
   }
-  chrome.tabs.sendMessage(tabId, { action: 'show-fab' }).catch(() => {});
+  chrome.tabs.sendMessage(tabId, { action: 'toggle-ui' }).catch(() => {});
 });
 
