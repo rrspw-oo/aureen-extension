@@ -1,6 +1,6 @@
 {
   "name": "aureen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Chrome extension for text highlighting with tags and translation",
   "type": "module",
   "scripts": {
