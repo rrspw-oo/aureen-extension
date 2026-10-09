@@ -114,7 +114,7 @@ As a user, you have the right to:
 
 If you have any questions or concerns about this Privacy Policy, please contact us:
 
-- GitHub Issues: https://github.com/rrspw-oo/Aureen/issues
+- GitHub Issues: https://github.com/rrspw-oo/aureen-extension/issues
 
 ## Compliance
 

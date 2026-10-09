@@ -41,8 +41,8 @@ Aureen 是我能做出最小、但能解決這四件事的工具。不用註冊�
 Aureen 目前還沒上架 Chrome 線上應用程式商店。從原始碼安裝：
 
 ```bash
-git clone https://github.com/rrspw-oo/Aureen.git
-cd Aureen
+git clone https://github.com/rrspw-oo/aureen-extension.git
+cd aureen-extension
 npm install
 npm run build
 ```

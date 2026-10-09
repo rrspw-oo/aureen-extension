@@ -114,7 +114,7 @@ Aureen（以下稱「本擴充功能」）重視你的隱私。本政策說明�
 
 如果你對本隱私權政策有任何疑問，請透過以下方式聯絡我們：
 
-- GitHub Issues：https://github.com/rrspw-oo/Aureen/issues
+- GitHub Issues：https://github.com/rrspw-oo/aureen-extension/issues
 
 ## 法規遵循
 

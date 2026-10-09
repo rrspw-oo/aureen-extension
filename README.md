@@ -41,8 +41,8 @@ Aureen is the smallest tool I could make that fixes those four, without an accou
 Aureen is not on the Chrome Web Store yet. To run it from source:
 
 ```bash
-git clone https://github.com/rrspw-oo/Aureen.git
-cd Aureen
+git clone https://github.com/rrspw-oo/aureen-extension.git
+cd aureen-extension
 npm install
 npm run build
 ```
