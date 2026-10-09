@@ -4,7 +4,7 @@
 
 Highlight text and screenshot anything on a web page, tag it, find it again later, and compare prices across shops. A Chrome extension. Everything stays on your machine.
 
-![Aureen sidebar next to an article with saved highlights](docs/images/en/hero.png)
+![Demo: highlight a sentence, tag it, then compare lamps by price](docs/images/en/demo.gif)
 
 ## Why
 
