@@ -22,10 +22,12 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onCancel();
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      onCancel();
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [onCancel]);
 
   const handlePointerDown = (edge: Edge) => (e: React.PointerEvent<HTMLDivElement>): void => {

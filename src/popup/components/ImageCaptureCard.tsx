@@ -192,9 +192,10 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
         {/* Info */}
         <div className="p-3">
           {/* Title */}
-          {capture.title && (
-            <p className="text-xs font-semibold text-[#9A7B43] mb-1.5 truncate">{capture.title}</p>
-          )}
+          <div className="flex items-baseline justify-between gap-2 mb-1.5">
+            <p className={`text-[13px] font-semibold truncate ${capture.title ? 'text-[#1F1F2E]' : 'text-[#6B6878] italic font-normal'}`}>{capture.title || 'Untitled'}</p>
+            {capture.price && <span className="text-xs font-semibold text-[#6E5428] flex-shrink-0">{capture.price.label}</span>}
+          </div>
 
           {/* Tags */}
           {capture.tags.length > 0 && (

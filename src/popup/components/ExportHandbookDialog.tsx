@@ -10,20 +10,20 @@ import { storageService } from '@/services/storage';
 
 interface ExportHandbookDialogProps {
   kind?: 'capture' | 'highlight';
-  tag?: string;
+  tags?: string[];
   onClose: () => void;
 }
 
 export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
   kind = 'capture',
-  tag,
+  tags: initialTags,
   onClose
 }) => {
   const isHighlight = kind === 'highlight';
   const [includeImage, setIncludeImage] = useState(true);
   const [count, setCount] = useState<number | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>(tag ? [tag] : []);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialTags ?? []);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
