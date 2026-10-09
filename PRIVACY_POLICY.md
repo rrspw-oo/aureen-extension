@@ -1,10 +1,10 @@
 # Privacy Policy for Aureen
 
-**Last Updated: October 30, 2025**
+**Last Updated: October 9, 2026**
 
 ## Introduction
 
-Aureen ("the Extension") is committed to protecting your privacy. This Privacy Policy explains how we handle your data when you use our Chrome extension for text highlighting and region screenshot capture.
+Aureen ("the Extension") is committed to protecting your privacy. This Privacy Policy explains how we handle your data when you use our Chrome extension for text highlighting and screenshot capture.
 
 ## Data Collection and Storage
 
@@ -16,19 +16,24 @@ The Extension collects and stores the following data **locally on your device on
    - Selected text from webpages
    - Source URL and page title
    - User-created tags
+   - Highlight color
+   - Optional title and notes
+   - Links to other saved items you choose to connect
    - Highlight position on the page
    - Timestamp of creation and modification
 
-2. **Region Screenshots**
-   - Screenshot images (stored as Base64-encoded JPEG)
+2. **Screenshots (region and full-page)**
+   - Screenshot images (stored as Base64-encoded PNG for region screenshots and JPEG for full-page screenshots)
    - Source webpage URL
    - User-created tags
-   - Optional user notes
+   - Optional title and notes
+   - Links to other saved items you choose to connect
    - Timestamp of creation
+   - Recognized text, only when you choose "Recognize text" on a screenshot (processed offline on your device)
 
 3. **User Preferences**
-   - Tag organization preferences
-   - Display settings
+   - Default highlight color and interface language
+   - Position of the floating button on the page
 
 ### How Data is Stored
 
@@ -45,7 +50,7 @@ The collected data is used exclusively for:
 - Displaying your saved highlights and screenshots
 - Organizing content with tags
 - Filtering and searching your saved items
-- Exporting your data in JSON or Markdown format
+- Exporting your data as JSON, Markdown, or PDF files saved to your device
 
 ## Data Access
 
@@ -65,9 +70,10 @@ The collected data is used exclusively for:
 The Extension requires the following permissions:
 
 - **storage**: To save your highlights, screenshots, and preferences locally
-- **activeTab**: To access the content of the webpage you're currently viewing for highlighting and capturing
-- **tabs**: To manage the sidebar and popup interface
+- **activeTab**: To capture the visible area of the tab you are viewing when you take a screenshot
+- **scripting**: To add the Extension's page script to tabs that were already open before the Extension was installed or updated, so highlighting and capturing work without reloading them
 - **host_permissions (<all_urls>)**: To allow you to use highlighting and screenshot features on any website you visit
+- **offscreen**: To run offline text recognition (OCR) on a saved screenshot in a hidden extension page; the image never leaves your device
 
 These permissions are used **exclusively** for the functionality described above and do not enable any data collection or transmission.
 
@@ -96,7 +102,7 @@ While we take reasonable precautions to protect your data through Chrome's built
 As a user, you have the right to:
 
 - Access all your stored data through the Extension interface
-- Export your data in JSON or Markdown format
+- Export your data as JSON, Markdown, or PDF files
 - Delete any or all of your data at any time
 - Uninstall the Extension, which removes all associated local data
 
