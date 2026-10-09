@@ -20,6 +20,13 @@ export interface ImageCapture {
   ocrText?: string;
   ocrStatus?: OcrStatus;
   ocrLang?: string;
+  price?: CapturePrice;
+}
+
+export interface CapturePrice {
+  amount: number;
+  label: string;
+  source: 'ocr' | 'manual';
 }
 
 export type OcrStatus = 'done' | 'failed';
