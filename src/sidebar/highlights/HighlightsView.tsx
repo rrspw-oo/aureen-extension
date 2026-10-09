@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { storageService } from '@/lib/highlight-store';
 import { imageCaptureStorage } from '@/lib/capture-store';
 import { HighlightList, type HighlightGroup } from '@/sidebar/highlights/HighlightList';
@@ -35,6 +36,7 @@ interface HighlightAction {
 const EMPTY_FIELDS: HighlightFormFields = { title: '', note: '', tags: [], linkedIds: [] };
 
 export const HighlightsView: React.FC<HighlightsViewProps> = ({ initialData, focusHighlightId, onNavigate, onFocusHandled }) => {
+  const { t } = useTranslation();
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [allCaptures, setAllCaptures] = useState<ImageCapture[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -192,7 +194,7 @@ export const HighlightsView: React.FC<HighlightsViewProps> = ({ initialData, foc
       closeSheet();
     } catch (error) {
       console.error('Error saving highlight:', error);
-      alert('Failed to save highlight. Please try again.');
+      alert(t('highlights.saveFailed'));
     }
   };
 
@@ -207,7 +209,7 @@ export const HighlightsView: React.FC<HighlightsViewProps> = ({ initialData, foc
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 pt-2.5 flex flex-col gap-2.5 flex-shrink-0">
-        <SearchField value={query} onChange={setQuery} placeholder="Search text, notes, titles" />
+        <SearchField value={query} onChange={setQuery} placeholder={t('highlights.search')} />
         {tagSummaries.length > 0 && (
           <TagChipRow tags={tagSummaries} total={highlights.length} selected={selectedTags} onChange={setSelectedTags} />
         )}
@@ -216,14 +218,14 @@ export const HighlightsView: React.FC<HighlightsViewProps> = ({ initialData, foc
       <main className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4">
         {highlights.length === 0 ? (
           <div className="text-center py-12 px-6">
-            <p className="text-[#1F1F2E] font-medium mb-1">No highlights yet</p>
-            <p className="text-sm text-[#6B6878]">Select text on any page and choose Highlight in the toolbar that appears.</p>
+            <p className="text-[#1F1F2E] font-medium mb-1">{t('highlights.emptyTitle')}</p>
+            <p className="text-sm text-[#6B6878]">{t('highlights.emptyBody')}</p>
           </div>
         ) : groups.length === 0 ? (
           <div className="text-center py-12 px-6">
-            <p className="text-[#1F1F2E] font-medium mb-1">No highlights match</p>
+            <p className="text-[#1F1F2E] font-medium mb-1">{t('highlights.noMatch')}</p>
             <button type="button" onClick={() => { setQuery(''); setSelectedTags([]); }} className="text-sm text-[#7E5F25] underline">
-              Clear search and filters
+              {t('highlights.clearFilters')}
             </button>
           </div>
         ) : (
@@ -239,7 +241,7 @@ export const HighlightsView: React.FC<HighlightsViewProps> = ({ initialData, foc
       </main>
 
       <footer className="h-10 flex-shrink-0 px-4 flex items-center justify-between border-t border-[#ECE4D4] bg-white text-xs text-[#6B6878]">
-        <span>{filtered.length} of {highlights.length} highlights</span>
+        <span>{t('highlights.footer', { shown: filtered.length, total: highlights.length })}</span>
         <StorageMeter />
       </footer>
 

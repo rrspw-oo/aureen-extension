@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { HighlightCard } from '@/sidebar/highlights/HighlightCard';
 import type { Highlight } from '@/types/highlight';
 import type { LinkEntry, LinkKind } from '@/sidebar/ui/LinkedItems';
@@ -28,7 +29,9 @@ function hostOf(url: string): string {
   }
 }
 
-export const HighlightList: React.FC<HighlightListProps> = ({ groups, onEdit, onDelete, getLinks, onNavigate, focusedId }) => (
+export const HighlightList: React.FC<HighlightListProps> = ({ groups, onEdit, onDelete, getLinks, onNavigate, focusedId }) => {
+  const { t } = useTranslation();
+  return (
   <div className="flex flex-col gap-4">
     {groups.map((group) => {
       const host = hostOf(group.url);
@@ -41,8 +44,8 @@ export const HighlightList: React.FC<HighlightListProps> = ({ groups, onEdit, on
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-semibold truncate text-[#1F1F2E]">{group.title || host || group.url}</div>
               <div className="text-[11px] text-[#6B6878] truncate">
-                {host || group.url} · {group.items.length} {group.items.length === 1 ? 'highlight' : 'highlights'}
-                {group.isCurrentPage && <span className="text-[#7E5F25] font-semibold"> · this page</span>}
+                {host || group.url} · {t('highlights.groupCount', { count: group.items.length })}
+                {group.isCurrentPage && <span className="text-[#7E5F25] font-semibold"> · {t('highlights.thisPage')}</span>}
               </div>
             </div>
           </div>
@@ -63,3 +66,4 @@ export const HighlightList: React.FC<HighlightListProps> = ({ groups, onEdit, on
     })}
   </div>
 );
+};

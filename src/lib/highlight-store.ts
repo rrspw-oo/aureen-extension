@@ -17,7 +17,7 @@ import { normalizePageUrl } from '@/lib/url';
  */
 const DEFAULT_SETTINGS: Settings = {
   defaultColor: 'yellow',
-  interfaceLanguage: 'en'
+  language: 'auto'
 };
 
 /**

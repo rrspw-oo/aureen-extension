@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LinkedItems, type LinkEntry, type LinkKind } from '@/sidebar/ui/LinkedItems';
 import { getRelativeTime } from '@/lib/date';
 import type { Highlight, HighlightColor } from '@/types/highlight';
@@ -33,6 +34,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
   focused = false,
   onThisPage = false
 }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const cardRef = useRef<HTMLElement>(null);
   const tint = MARK_TINT[highlight.color] ?? MARK_TINT.yellow;
@@ -46,7 +48,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
   }, [focused]);
 
   const handleDelete = (): void => {
-    if (onDelete && confirm('Are you sure you want to delete this highlight?')) onDelete(highlight.id);
+    if (onDelete && confirm(t('highlights.confirmDelete'))) onDelete(highlight.id);
   };
 
   return (
@@ -67,8 +69,8 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
           {onEdit && (
             <button
               type="button"
-              title="Edit"
-              aria-label="Edit highlight"
+              title={t('common.edit')}
+              aria-label={t('highlights.editLabel')}
               onClick={() => onEdit(highlight)}
               className="w-7 h-7 flex items-center justify-center rounded-md text-[#9A958A] hover:bg-[#F4F1EA] hover:text-[#1F1F2E]"
             >
@@ -78,8 +80,8 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
           {onDelete && (
             <button
               type="button"
-              title="Delete"
-              aria-label="Delete highlight"
+              title={t('common.delete')}
+              aria-label={t('highlights.deleteLabel')}
               onClick={handleDelete}
               className="w-7 h-7 flex items-center justify-center rounded-md text-[#9A958A] hover:bg-[#FDF0EE] hover:text-[#B5533F]"
             >
@@ -94,13 +96,13 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
       </p>
       {isLong && (
         <button type="button" onClick={() => setIsExpanded((v) => !v)} className="self-start -mt-1 text-xs font-medium text-[#7E5F25] hover:underline">
-          {isExpanded ? 'Less' : 'More'}
+          {isExpanded ? t('common.less') : t('common.more')}
         </button>
       )}
 
       {highlight.note && (
         <p className="m-0 text-[13px] leading-normal text-[#5E5A4E] line-clamp-3">
-          <span className="font-semibold text-[#7E5F25]">Note </span>
+          <span className="font-semibold text-[#7E5F25]">{t('highlights.note')} </span>
           {highlight.note}
         </p>
       )}
@@ -118,10 +120,10 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
             <button
               type="button"
               onClick={() => window.postMessage({ type: 'AUREEN_SCROLL_TO_HIGHLIGHT', highlightId: highlight.id }, '*')}
-              title="Scroll to this highlight on the page"
+              title={t('highlights.showOnPageTitle')}
               className="ml-auto h-7 px-2.5 rounded-md bg-[#FBF4E6] hover:bg-[#F4ECDD] text-[#6E5428] text-xs font-semibold"
             >
-              Show on page
+              {t('highlights.showOnPage')}
             </button>
           )}
         </div>

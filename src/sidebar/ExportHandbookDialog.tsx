@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   exportHandbook,
   exportHighlightHandbook,
@@ -19,6 +20,7 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
   tags: initialTags,
   onClose
 }) => {
+  const { t } = useTranslation();
   const isHighlight = kind === 'highlight';
   const [includeImage, setIncludeImage] = useState(true);
   const [count, setCount] = useState<number | null>(null);
@@ -59,13 +61,11 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
       }
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
+      setError(err instanceof Error ? err.message : t('exportDialog.failed'));
       setExporting(false);
     }
   };
 
-  const noun = isHighlight ? 'highlight' : 'capture';
-  const unit = count === 1 ? noun : `${noun}s`;
 
   return (
     <div
@@ -78,16 +78,16 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-gray-900">
-          {isHighlight ? 'Export Highlights' : 'Export Handbook'}
+          {isHighlight ? t('exportDialog.titleHighlights') : t('exportDialog.titleCaptures')}
         </h3>
         <p className="mt-1 text-xs text-gray-500">
-          {count === null ? 'Counting...' : `${count} ${unit}`}
+          {count === null ? t('exportDialog.counting') : t(isHighlight ? 'exportDialog.highlights' : 'exportDialog.captures', { count })}
         </p>
 
         {tags.length > 0 && (
           <div className="mt-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">Choose tags to export</span>
+              <span className="text-sm text-gray-700">{t('exportDialog.chooseTags')}</span>
               {selectedTags.length > 0 && (
                 <button
                   type="button"
@@ -95,14 +95,14 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
                   disabled={exporting}
                   className="text-xs text-gray-400 hover:text-gray-700 disabled:opacity-50"
                 >
-                  Clear
+                  {t('common.clear')}
                 </button>
               )}
             </div>
             <p className="mt-0.5 text-xs text-gray-400">
               {selectedTags.length === 0
-                ? 'None selected — exports everything'
-                : 'Items with any selected tag are included'}
+                ? t('exportDialog.noneSelected')
+                : t('exportDialog.anySelected')}
             </p>
             <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
               {tags.map((item) => {
@@ -137,9 +137,9 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
               className="mt-0.5 h-4 w-4 rounded border-gray-300"
             />
             <span className="text-sm text-gray-700">
-              Include original image
+              {t('exportDialog.includeImage')}
               <span className="block text-xs text-gray-400">
-                When off, pages show text instead
+                {t('exportDialog.includeImageHint')}
               </span>
             </span>
           </label>
@@ -154,7 +154,7 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
             disabled={exporting}
             className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -162,7 +162,7 @@ export const ExportHandbookDialog: React.FC<ExportHandbookDialogProps> = ({
             disabled={exporting || count === 0}
             className="rounded-md bg-[#C9A86C] px-4 py-1.5 text-sm font-medium text-[#2C2417] hover:bg-[#B8975B] disabled:opacity-50"
           >
-            {exporting ? 'Exporting...' : 'Export PDF'}
+            {exporting ? t('exportDialog.exporting') : t('exportDialog.exportPdf')}
           </button>
         </div>
       </div>

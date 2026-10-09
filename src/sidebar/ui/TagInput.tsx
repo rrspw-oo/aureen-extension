@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { sanitizeTagName } from '@/lib/security';
 
 const SEPARATORS = /[,，、;；]/;
@@ -32,12 +33,13 @@ export const TagInput: React.FC<TagInputProps> = ({
   onChange,
   onSubmit,
   onPendingChange,
-  label = 'Tags (hashtags)',
+  label,
   hint,
-  placeholder = 'Add tags (space or comma separated)',
+  placeholder,
   maxTags = 10,
   disabled = false
 }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -126,9 +128,9 @@ export const TagInput: React.FC<TagInputProps> = ({
 
   return (
     <div className="tag-input relative">
-      {label && (
+      {label !== null && (
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
+          {label ?? t('tagInput.label')}
         </label>
       )}
 
@@ -144,7 +146,7 @@ export const TagInput: React.FC<TagInputProps> = ({
               onClick={() => removeTag(index)}
               disabled={disabled}
               className="hover:bg-[#E8DCC2] rounded-full p-1 transition-colors"
-              aria-label={`Remove tag ${tag}`}
+              aria-label={t('tagInput.remove', { tag })}
             >
               <svg
                 className="w-3 h-3"
@@ -172,10 +174,10 @@ export const TagInput: React.FC<TagInputProps> = ({
           onKeyDown={handleInputKeyDown}
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => setShowSuggestions(false)}
-          placeholder={tags.length === 0 ? placeholder : ''}
+          placeholder={tags.length === 0 ? placeholder ?? t('tagInput.placeholder') : ''}
           disabled={disabled || tags.length >= maxTags}
           className="flex-1 min-w-[120px] outline-none bg-transparent text-sm"
-          aria-label="Tag input"
+          aria-label={t('tagInput.aria')}
         />
       </div>
 
@@ -183,7 +185,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
       {showSuggestions && filteredSuggestions.length > 0 && (
         <div className="mt-1 p-2 bg-white border border-gray-300 rounded-lg shadow-lg max-h-32 overflow-y-auto">
-          <p className="text-xs text-gray-400 mb-1">Quick select:</p>
+          <p className="text-xs text-gray-400 mb-1">{t('tagInput.quickSelect')}</p>
           <div className="flex flex-wrap gap-1">
             {filteredSuggestions.map((suggestion) => (
               <button
@@ -202,7 +204,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
       {tags.length >= maxTags && (
         <p className="mt-1 text-xs text-amber-600">
-          Maximum {maxTags} tags reached
+          {t('tagInput.max', { count: maxTags })}
         </p>
       )}
     </div>

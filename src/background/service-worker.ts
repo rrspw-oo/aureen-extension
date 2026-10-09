@@ -108,7 +108,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     // Initialize default settings
     await storageService.saveSettings({
       defaultColor: 'yellow',
-      interfaceLanguage: 'en'
+      language: 'auto'
     });
   } else if (details.reason === 'update') {
     // Extension updated

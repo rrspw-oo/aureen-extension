@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useTranslation } from 'react-i18next';
+import '@/i18n/config';
 import styles from '@/index.css?inline';
 import { registerFabFns, hideFab } from '@/page/fab-bridge';
 import { startScreenshotCapture } from '@/page/region-capture';
@@ -56,7 +58,7 @@ const ICON_STROKE = '#6E5428';
 
 const ITEMS = [
   {
-    label: 'Open library',
+    label: 'fab.openLibrary',
     hint: 'Alt S',
     action: 'sidebar',
     icon: (
@@ -67,7 +69,7 @@ const ITEMS = [
     ),
   },
   {
-    label: 'Capture region',
+    label: 'fab.captureRegion',
     hint: '',
     action: 'screenshot',
     icon: (
@@ -77,7 +79,7 @@ const ITEMS = [
     ),
   },
   {
-    label: 'Capture full page',
+    label: 'fab.captureFullPage',
     hint: '',
     action: 'fullpage',
     icon: (
@@ -128,6 +130,7 @@ const MENU_ROW: React.CSSProperties = {
 };
 
 const FabButton: React.FC = () => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [position, setPosition] = useState<FabPosition>(defaultPosition);
   const [dragging, setDragging] = useState(false);
@@ -218,7 +221,7 @@ const FabButton: React.FC = () => {
       {expanded && !dragging && (
         <div
           role="menu"
-          aria-label="Aureen"
+          aria-label={t('fab.menu')}
           style={{
             width: '216px',
             padding: '6px',
@@ -242,7 +245,7 @@ const FabButton: React.FC = () => {
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
               {item.hint && <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#6B6878' }}>{item.hint}</span>}
             </button>
           ))}
@@ -258,7 +261,7 @@ const FabButton: React.FC = () => {
               <path d="M3 3l18 18" />
               <path d="M10.6 5.1A10 10 0 0122 12a17 17 0 01-2.6 3.4M6.3 6.3A17 17 0 002 12s3.6 7 10 7a9.6 9.6 0 004.3-1" />
             </svg>
-            <span>Hide</span>
+            <span>{t('fab.hide')}</span>
           </button>
         </div>
       )}
@@ -268,7 +271,7 @@ const FabButton: React.FC = () => {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         title="Aureen"
-        aria-label="Aureen menu"
+        aria-label={t('fab.menu')}
         aria-expanded={expanded}
         style={{
           width: `${FAB_SIZE}px`,

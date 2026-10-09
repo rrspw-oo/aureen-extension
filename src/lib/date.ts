@@ -1,3 +1,5 @@
+import { t } from '@/i18n/config';
+
 /**
  * Date Utility Functions
  * Centralized date formatting and manipulation
@@ -29,30 +31,16 @@ export function getISODate(date?: Date | number): string {
  * @returns Relative time string
  */
 export function getRelativeTime(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
+  const minutes = Math.floor((Date.now() - timestamp) / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
   const months = Math.floor(days / 30);
   const years = Math.floor(days / 365);
 
-  if (years > 0) {
-    return `${years} year${years > 1 ? 's' : ''} ago`;
-  }
-  if (months > 0) {
-    return `${months} month${months > 1 ? 's' : ''} ago`;
-  }
-  if (days > 0) {
-    return `${days} day${days > 1 ? 's' : ''} ago`;
-  }
-  if (hours > 0) {
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-  }
-  if (minutes > 0) {
-    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-  }
-  return 'just now';
+  if (years > 0) return t('time.years', { count: years });
+  if (months > 0) return t('time.months', { count: months });
+  if (days > 0) return t('time.days', { count: days });
+  if (hours > 0) return t('time.hours', { count: hours });
+  if (minutes > 0) return t('time.minutes', { count: minutes });
+  return t('time.justNow');
 }

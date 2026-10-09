@@ -1,5 +1,6 @@
 import { mountSidebarWithShadow } from '@/sidebar/shell';
 import { showFab } from '@/page/fab-bridge';
+import { t } from '@/i18n/config';
 
 const RANGE_BAR_CSS = `
   .bar {
@@ -43,12 +44,12 @@ function chooseCaptureRange(): Promise<RangeChoice | null> {
     const bar = document.createElement('div');
     bar.className = 'bar';
     const text = document.createElement('span');
-    text.textContent = 'Scroll to where the capture should end, then click "Capture to here".';
+    text.textContent = t('fullPage.instruction');
     bar.appendChild(text);
     const buttons: [string, string, boolean][] = [
-      ['here', 'Capture to here', true],
-      ['whole', 'Whole page', false],
-      ['cancel', 'Cancel', false]
+      ['here', t('fullPage.here'), true],
+      ['whole', t('fullPage.whole'), false],
+      ['cancel', t('fullPage.cancel'), false]
     ];
     for (const [action, label, primary] of buttons) {
       const button = document.createElement('button');
@@ -63,7 +64,7 @@ function chooseCaptureRange(): Promise<RangeChoice | null> {
     const line = document.createElement('div');
     line.className = 'end-line';
     const lineLabel = document.createElement('span');
-    lineLabel.textContent = 'Capture ends here';
+    lineLabel.textContent = t('fullPage.endsHere');
     line.appendChild(lineLabel);
     root.appendChild(line);
 
@@ -200,7 +201,7 @@ export async function startFullPageCapture(): Promise<void> {
     });
   } catch (error) {
     console.error('Full page capture error:', error);
-    alert('Failed to capture full page. Please try again.');
+    alert(t('fullPage.failed'));
   } finally {
     restoreFixedElements(saved);
     window.scrollTo(originalScrollX, originalScrollY);

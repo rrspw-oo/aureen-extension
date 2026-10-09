@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, SaveHint, FieldLabel } from '@/sidebar/ui/Sheet';
 import { TagInput, withPendingTag } from '@/sidebar/ui/TagInput';
 import { LinkPicker } from '@/sidebar/ui/LinkPicker';
@@ -49,6 +50,7 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
   onSave,
   onCancel
 }) => {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initial.title);
   const [note, setNote] = useState(initial.note);
   const [tags, setTags] = useState<string[]>(initial.tags);
@@ -63,7 +65,7 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
 
   return (
     <Sheet
-      title={isEdit ? 'Edit highlight' : 'New highlight'}
+      title={isEdit ? t('form.editHighlight') : t('form.newHighlight')}
       subtitle={hostOf(pageUrl)}
       onClose={onCancel}
       footer={
@@ -74,7 +76,7 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
             onClick={() => save()}
             className="ml-auto h-11 px-5 rounded-[10px] bg-[#C9A86C] hover:bg-[#B8975B] text-[#2C2417] text-sm font-semibold"
           >
-            Save highlight
+            {t('form.saveHighlight')}
           </button>
         </>
       }
@@ -91,18 +93,18 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
         <p className="m-0 px-3.5 py-3 rounded-[10px] bg-[#FBF6EB] text-sm leading-relaxed text-[#2E2A22] line-clamp-6">{text}</p>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel htmlFor="hl-title" label="Title" hint="Card and PDF heading" />
+          <FieldLabel htmlFor="hl-title" label={t('form.title')} hint={t('form.titleHint')} />
           <input
             id="hl-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Optional. Defaults to the page title"
+            placeholder={t('form.titlePlaceholderHighlight')}
             className="h-10 px-3 border border-[#E2D8C4] rounded-[9px] text-sm outline-none focus:border-[#C9A86C]"
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel label="Tags" hint="Filter and export" />
+          <FieldLabel label={t('form.tags')} hint={t('form.tagsHint')} />
           <TagInput
             tags={tags}
             onChange={setTags}
@@ -110,11 +112,11 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
             onPendingChange={setPendingTag}
             suggestions={suggestions.map((name) => ({ name }))}
             label={null}
-            placeholder="e.g. research, todo"
+            placeholder={t('form.tagsPlaceholderHighlight')}
             maxTags={Infinity}
           />
           <div className="flex items-center gap-1.5 flex-wrap">
-            {recent.length > 0 && <span className="text-[11px] text-[#6B6878]">Recent</span>}
+            {recent.length > 0 && <span className="text-[11px] text-[#6B6878]">{t('form.recent')}</span>}
             {recent.map((tag) => (
               <button
                 key={tag}
@@ -125,19 +127,19 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
                 {tag}
               </button>
             ))}
-            <span className="ml-auto text-[11px] text-[#6B6878]">Enter adds a tag</span>
+            <span className="ml-auto text-[11px] text-[#6B6878]">{t('form.enterAddsTag')}</span>
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel htmlFor="hl-note" label="Note" hint="Shown on the card and in the PDF" />
+          <FieldLabel htmlFor="hl-note" label={t('form.note')} hint={t('form.noteHint')} />
           <textarea
             id="hl-note"
             rows={3}
             value={note}
             autoFocus={focusNote}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Why this matters"
+            placeholder={t('form.notePlaceholderHighlight')}
             className="px-3 py-2.5 border border-[#E2D8C4] rounded-[9px] text-sm resize-none outline-none focus:border-[#C9A86C]"
           />
         </div>

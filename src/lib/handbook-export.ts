@@ -1,3 +1,4 @@
+import { t } from '@/i18n/config';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import type { ImageCapture, ImageTag } from '@/types/image-capture';
@@ -30,17 +31,17 @@ const TOC_MIN_ITEMS = 4;
 
 // zh-TW labels, matching the wording used in the shipped handbook.
 const L = {
-  tocHeading: '目錄',
-  source: '來源',
-  note: '備註',
-  captureFallback: (n: number) => `截圖 ${n}`,
-  highlightFallback: (n: number) => `重點 ${n}`,
-  ocrFailed: '此截圖的文字辨識失敗。',
-  ocrPending: '此截圖的文字辨識尚未完成。',
-  captureUnit: '篇截圖',
-  highlightUnit: '則重點',
-  handbookTitle: 'Aureen 手冊',
-  highlightTitle: 'Aureen 重點'
+  get tocHeading() { return t('handbook.toc'); },
+  get source() { return t('handbook.source'); },
+  get note() { return t('handbook.note'); },
+  captureFallback: (n: number) => t('handbook.captureFallback', { n }),
+  highlightFallback: (n: number) => t('handbook.highlightFallback', { n }),
+  get ocrFailed() { return t('handbook.ocrFailed'); },
+  get ocrPending() { return t('handbook.ocrPending'); },
+  captureUnit: (count: number) => t('handbook.captureUnit', { count }),
+  highlightUnit: (count: number) => t('handbook.highlightUnit', { count }),
+  get handbookTitle() { return t('handbook.handbookTitle'); },
+  get highlightTitle() { return t('handbook.highlightTitle'); }
 };
 
 const TAG_HEX: Record<string, string> = {
@@ -521,9 +522,9 @@ export async function exportHandbook(options: HandbookOptions): Promise<number> 
   let blob: Blob;
   if (hasRenderableImages(items, options.includeImage)) {
     await downscaleItems(items);
-    blob = await buildHandbookBlob(items, tagColors, options, title, L.captureUnit);
+    blob = await buildHandbookBlob(items, tagColors, options, title, L.captureUnit(items.length));
   } else {
-    blob = buildTextHandbookBlob(items, title, L.captureUnit);
+    blob = buildTextHandbookBlob(items, title, L.captureUnit(items.length));
   }
   const slug = tagScopeSlug(selected);
   const baseName = slug ? `aureen-handbook-${slug}` : 'aureen-handbook';
@@ -553,8 +554,8 @@ export async function exportHighlightHandbook(options: HandbookOptions): Promise
 
   const highlightOptions: HandbookOptions = { ...options, includeImage: false };
   const blob = hasRenderableImages(items, highlightOptions.includeImage)
-    ? await buildHandbookBlob(items, tagColors, highlightOptions, title, L.highlightUnit)
-    : buildTextHandbookBlob(items, title, L.highlightUnit);
+    ? await buildHandbookBlob(items, tagColors, highlightOptions, title, L.highlightUnit(items.length))
+    : buildTextHandbookBlob(items, title, L.highlightUnit(items.length));
   const slug = tagScopeSlug(selected);
   const baseName = slug ? `aureen-highlights-${slug}` : 'aureen-highlights';
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');

@@ -3,6 +3,7 @@
  * Orchestrates the screenshot capture workflow
  */
 
+import { t } from '@/i18n/config';
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { SelectionRect } from '@/types/image-capture';
@@ -68,7 +69,7 @@ async function handleCapture(rect: SelectionRect): Promise<void> {
     });
   } catch (error) {
     console.error('Screenshot capture error:', error);
-    alert('Failed to capture screenshot. Please try again.');
+    alert(t('fullPage.regionFailed'));
   }
 }
 

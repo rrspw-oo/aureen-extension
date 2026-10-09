@@ -5,6 +5,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import '@/i18n/config';
 import { createRoot } from 'react-dom/client';
 import { HighlightsView } from '@/sidebar/highlights/HighlightsView';
 import { CapturesView } from '@/sidebar/captures/CapturesView';
@@ -15,6 +17,7 @@ import { storageService } from '@/lib/highlight-store';
 import { imageCaptureStorage } from '@/lib/capture-store';
 import { ExportHandbookDialog } from '@/sidebar/ExportHandbookDialog';
 import type { LinkKind } from '@/sidebar/ui/LinkedItems';
+import type { LanguageSetting } from '@/types/highlight';
 
 type TabType = 'highlights' | 'images';
 
@@ -183,7 +186,15 @@ const IconButton: React.FC<{ label: string; onClick: () => void; children: React
   </button>
 );
 
+const LANGUAGE_OPTIONS: { value: LanguageSetting; label: string }[] = [
+  { value: 'auto', label: 'shell.languageAuto' },
+  { value: 'en', label: 'English' },
+  { value: 'zh-TW', label: '繁體中文' }
+];
+
 const SidebarApp: React.FC = () => {
+  const { t } = useTranslation();
+  const [language, setLanguage] = useState<LanguageSetting>('auto');
   const [data, setData] = useState<Record<string, unknown>>({});
   const [activeTab, setActiveTab] = useState<TabType>('highlights');
   const [focusTarget, setFocusTarget] = useState<{ kind: LinkKind; id: string } | null>(null);
@@ -194,6 +205,15 @@ const SidebarApp: React.FC = () => {
   const handleNavigate = (kind: LinkKind, id: string): void => {
     setActiveTab(kind === 'highlight' ? 'highlights' : 'images');
     setFocusTarget({ kind, id });
+  };
+
+  useEffect(() => {
+    storageService.getSettings().then((settings) => setLanguage(settings.language ?? 'auto'));
+  }, []);
+
+  const chooseLanguage = (value: LanguageSetting): void => {
+    setLanguage(value);
+    storageService.saveSettings({ language: value });
   };
 
   useEffect(() => {
@@ -265,9 +285,9 @@ const SidebarApp: React.FC = () => {
   };
 
   const handleClearAll = async (): Promise<void> => {
-    const confirmed = confirm('Delete ALL highlights? This cannot be undone.');
+    const confirmed = confirm(t('shell.confirmDeleteAll'));
     if (!confirmed) return;
-    const confirmed2 = confirm('Are you absolutely sure?');
+    const confirmed2 = confirm(t('shell.confirmDeleteAll2'));
     if (!confirmed2) return;
     await storageService.clearAllData();
   };
@@ -285,20 +305,20 @@ const SidebarApp: React.FC = () => {
           <span className="text-base font-semibold tracking-[0.02em]">Aureen</span>
         </div>
         <div className="flex items-center gap-1">
-          <IconButton label="Export" expanded={openMenu === 'export'} onClick={() => setOpenMenu(openMenu === 'export' ? null : 'export')}>
+          <IconButton label={t('shell.export')} expanded={openMenu === 'export'} onClick={() => setOpenMenu(openMenu === 'export' ? null : 'export')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M4 19h16" /></svg>
           </IconButton>
-          <IconButton label="More" expanded={openMenu === 'more'} onClick={() => setOpenMenu(openMenu === 'more' ? null : 'more')}>
+          <IconButton label={t('shell.more')} expanded={openMenu === 'more'} onClick={() => setOpenMenu(openMenu === 'more' ? null : 'more')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#5E5A4E"><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
           </IconButton>
           <button
             type="button"
-            title="Close panel (Esc)"
+            title={t('shell.closeTitle')}
             onClick={() => hideSidebarShadow(true)}
             className="h-8 px-2.5 flex items-center gap-1.5 border border-[#E2D8C4] rounded-lg bg-white text-xs font-medium text-[#5E5A4E] hover:bg-[#F4F1EA]"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-            Close
+            {t('common.close')}
           </button>
         </div>
 
@@ -311,16 +331,35 @@ const SidebarApp: React.FC = () => {
             {openMenu === 'export' ? (
               <>
                 <MenuAction
-                  label={activeTab === 'images' ? 'Screenshots handbook (PDF)' : 'Highlights handbook (PDF)'}
+                  label={activeTab === 'images' ? t('shell.handbookCaptures') : t('shell.handbookHighlights')}
                   onClick={() => runMenu(() => setHandbookOpen(true))}
                 />
                 <div className="h-px bg-[#ECE4D4] my-1" />
-                <MenuAction label="Highlights as JSON" onClick={() => runMenu(async () => exportImportService.downloadAsJson(await exportImportService.exportAll()))} />
-                <MenuAction label="Highlights as Markdown, by page" onClick={() => runMenu(() => exportImportService.downloadAsMarkdown({ groupBy: 'url' }))} />
-                <MenuAction label="Highlights as Markdown, by tag" onClick={() => runMenu(() => exportImportService.downloadAsMarkdown({ groupBy: 'tag' }))} />
+                <MenuAction label={t('shell.highlightsJson')} onClick={() => runMenu(async () => exportImportService.downloadAsJson(await exportImportService.exportAll()))} />
+                <MenuAction label={t('shell.highlightsMdPage')} onClick={() => runMenu(() => exportImportService.downloadAsMarkdown({ groupBy: 'url' }))} />
+                <MenuAction label={t('shell.highlightsMdTag')} onClick={() => runMenu(() => exportImportService.downloadAsMarkdown({ groupBy: 'tag' }))} />
               </>
             ) : (
-              <MenuAction label="Delete all highlights" onClick={() => runMenu(handleClearAll)} danger />
+              <>
+                <div className="px-3.5 pt-1.5 pb-1 text-[11px] font-semibold text-[#6B6878]">{t('shell.language')}</div>
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={language === option.value}
+                    onClick={() => runMenu(() => chooseLanguage(option.value))}
+                    className="flex items-center justify-between w-full px-3.5 py-2 text-left text-[13px] text-[#1F1F2E] hover:bg-[#F6EFE2]"
+                  >
+                    {option.value === 'auto' ? t(option.label) : option.label}
+                    {language === option.value && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A9863F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+                    )}
+                  </button>
+                ))}
+                <div className="h-px bg-[#ECE4D4] my-1" />
+                <MenuAction label={t('shell.deleteAll')} onClick={() => runMenu(handleClearAll)} danger />
+              </>
             )}
           </div>
         )}
@@ -329,10 +368,10 @@ const SidebarApp: React.FC = () => {
       <div className="px-4 pt-3 flex-shrink-0">
         <div role="tablist" className="grid grid-cols-2 gap-1 p-1 bg-[#F1EBDF] rounded-[10px]">
           <button type="button" role="tab" aria-selected={activeTab === 'highlights'} onClick={() => setActiveTab('highlights')} className={tabClass('highlights')}>
-            Highlights <span className={activeTab === 'highlights' ? 'text-[#7E5F25]' : ''}>{counts.highlights}</span>
+            {t('shell.highlights')} <span className={activeTab === 'highlights' ? 'text-[#7E5F25]' : ''}>{counts.highlights}</span>
           </button>
           <button type="button" role="tab" aria-selected={activeTab === 'images'} onClick={() => setActiveTab('images')} className={tabClass('images')}>
-            Captures <span className={activeTab === 'images' ? 'text-[#7E5F25]' : ''}>{counts.captures}</span>
+            {t('shell.captures')} <span className={activeTab === 'images' ? 'text-[#7E5F25]' : ''}>{counts.captures}</span>
           </button>
         </div>
       </div>

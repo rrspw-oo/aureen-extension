@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { t as translate } from '@/i18n/config';
 
 export type LinkKind = 'highlight' | 'capture';
 
@@ -38,7 +40,7 @@ export function resolveLinks(
   }
   for (const c of captures) {
     if (c.id !== selfId && (own.has(c.id) || c.linkedIds?.includes(selfId))) {
-      entries.push({ kind: 'capture', id: c.id, label: c.title || 'Screenshot', thumb: c.imageData });
+      entries.push({ kind: 'capture', id: c.id, label: c.title || translate('common.screenshot'), thumb: c.imageData });
     }
   }
   return entries;
@@ -50,9 +52,11 @@ interface LinkedItemsProps {
   dark?: boolean;
 }
 
-export const LinkedItems: React.FC<LinkedItemsProps> = ({ links, onNavigate, dark = false }) => (
+export const LinkedItems: React.FC<LinkedItemsProps> = ({ links, onNavigate, dark = false }) => {
+  const { t } = useTranslation();
+  return (
   <div>
-    <p className={`text-xs font-semibold mb-1 ${dark ? 'text-[#E0CFA0]' : 'text-[#9A7B43]'}`}>Linked items</p>
+    <p className={`text-xs font-semibold mb-1 ${dark ? 'text-[#E0CFA0]' : 'text-[#9A7B43]'}`}>{t('link.linkedItems')}</p>
     <div className="space-y-1">
       {links.map((link) => (
         <button
@@ -69,7 +73,7 @@ export const LinkedItems: React.FC<LinkedItemsProps> = ({ links, onNavigate, dar
           {link.thumb ? (
             <img src={link.thumb} alt="" className="w-8 h-6 object-cover rounded flex-shrink-0" />
           ) : (
-            <span className="w-8 text-center flex-shrink-0 text-[10px] font-semibold uppercase opacity-70">Text</span>
+            <span className="w-8 text-center flex-shrink-0 text-[10px] font-semibold uppercase opacity-70">{t('common.text')}</span>
           )}
           <span className="truncate">{link.label}</span>
         </button>
@@ -77,3 +81,4 @@ export const LinkedItems: React.FC<LinkedItemsProps> = ({ links, onNavigate, dar
     </div>
   </div>
 );
+};

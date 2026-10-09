@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SheetProps {
   title: string;
@@ -9,6 +10,7 @@ interface SheetProps {
 }
 
 export const Sheet: React.FC<SheetProps> = ({ title, subtitle, onClose, footer, children }) => {
+  const { t } = useTranslation();
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape' && !e.isComposing) onClose();
@@ -35,8 +37,8 @@ export const Sheet: React.FC<SheetProps> = ({ title, subtitle, onClose, footer, 
           </div>
           <button
             type="button"
-            aria-label="Discard"
-            title="Discard (Esc)"
+            aria-label={t('common.discard')}
+            title={t('common.discardTitle')}
             onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#F4F1EA] hover:bg-[#ECE6DA]"
           >
@@ -52,13 +54,16 @@ export const Sheet: React.FC<SheetProps> = ({ title, subtitle, onClose, footer, 
   );
 };
 
-export const SaveHint: React.FC = () => (
+export const SaveHint: React.FC = () => {
+  const { t } = useTranslation();
+  return (
   <span className="flex items-center gap-1 text-xs text-[#6B6878]">
     <kbd className="px-1.5 py-px border border-[#DCD3C2] border-b-2 rounded text-[11px] font-medium text-[#5E5A4E]">Cmd</kbd>
     <kbd className="px-1.5 py-px border border-[#DCD3C2] border-b-2 rounded text-[11px] font-medium text-[#5E5A4E]">Enter</kbd>
-    to save
+    {t('common.toSave')}
   </span>
-);
+  );
+};
 
 export const FieldLabel: React.FC<{ htmlFor?: string; label: string; hint: string }> = ({ htmlFor, label, hint }) => (
   <label htmlFor={htmlFor} className="flex items-baseline justify-between text-[13px] font-semibold text-[#1F1F2E]">

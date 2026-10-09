@@ -10,13 +10,14 @@ import { highlighter } from '@/page/highlighter';
 import { startScreenshotCapture } from '@/page/region-capture';
 import { showFab, isFabVisible } from '@/page/fab-bridge';
 import { storageService } from '@/lib/highlight-store';
+import { t } from '@/i18n/config';
 import type { Highlight, HighlightColor } from '@/types/highlight';
 
 const TOOLBAR_COLORS: { color: HighlightColor; swatch: string; label: string }[] = [
-  { color: 'yellow', swatch: '#F0DDAE', label: 'Champagne' },
-  { color: 'mint', swatch: '#CDEBD8', label: 'Mint' },
-  { color: 'coral', swatch: '#F6D0CC', label: 'Rose' },
-  { color: 'sky', swatch: '#CFE0F6', label: 'Sky' }
+  { color: 'yellow', swatch: '#F0DDAE', label: 'toolbar.champagne' },
+  { color: 'mint', swatch: '#CDEBD8', label: 'toolbar.mint' },
+  { color: 'coral', swatch: '#F6D0CC', label: 'toolbar.rose' },
+  { color: 'sky', swatch: '#CFE0F6', label: 'toolbar.sky' }
 ];
 
 declare global {
@@ -205,7 +206,7 @@ function showToolbar(): void {
   toolbar.id = 'highlight-toolbar';
   toolbar.className = 'highlight-toolbar toolbar';
   toolbar.setAttribute('role', 'toolbar');
-  toolbar.setAttribute('aria-label', 'Aureen highlight');
+  toolbar.setAttribute('aria-label', t('toolbar.aria'));
   toolbar.style.cssText = `
     position: fixed;
     z-index: 2147483647;
@@ -233,7 +234,7 @@ function showToolbar(): void {
   const highlightBtn = document.createElement('button');
   highlightBtn.id = 'highlight-btn';
   highlightBtn.type = 'button';
-  highlightBtn.title = 'Highlight text';
+  highlightBtn.title = t('toolbar.highlightTitle');
   highlightBtn.style.cssText = `
     height: 36px;
     padding: 0 12px;
@@ -249,7 +250,7 @@ function showToolbar(): void {
   `;
   const currentSwatch = document.createElement('span');
   currentSwatch.style.cssText = `width: 12px; height: 12px; border-radius: 50%; background: ${swatchOf(defaultColor)}; box-shadow: 0 0 0 1px rgba(44, 36, 23, 0.35);`;
-  highlightBtn.append(currentSwatch, document.createTextNode('Highlight'));
+  highlightBtn.append(currentSwatch, document.createTextNode(t('toolbar.highlight')));
   highlightBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -262,8 +263,8 @@ function showToolbar(): void {
     const dot = document.createElement('button');
     dot.type = 'button';
     dot.dataset.color = item.color;
-    dot.title = `Highlight in ${item.label}`;
-    dot.setAttribute('aria-label', `Highlight in ${item.label}`);
+    dot.title = t('toolbar.colorLabel', { color: t(item.label) });
+    dot.setAttribute('aria-label', t('toolbar.colorLabel', { color: t(item.label) }));
     dot.style.cssText = `
       width: 22px;
       height: 22px;
@@ -285,8 +286,8 @@ function showToolbar(): void {
 
   const noteBtn = document.createElement('button');
   noteBtn.type = 'button';
-  noteBtn.title = 'Highlight and add a note';
-  noteBtn.setAttribute('aria-label', 'Highlight and add note');
+  noteBtn.title = t('toolbar.note');
+  noteBtn.setAttribute('aria-label', t('toolbar.note'));
   noteBtn.style.cssText = `
     width: 36px;
     height: 36px;

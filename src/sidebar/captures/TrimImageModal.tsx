@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const MIN_FRACTION = 0.01;
 const EDGE_PX = 48;
@@ -13,6 +14,7 @@ interface TrimImageModalProps {
 type Edge = 'top' | 'bottom';
 
 export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCancel, onApply }) => {
+  const { t } = useTranslation();
   const [top, setTop] = useState(0);
   const [bottom, setBottom] = useState(1);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -97,9 +99,9 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 pt-4 pb-3 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900">Trim screenshot</h3>
+          <h3 className="text-base font-semibold text-gray-900">{t('trim.title')}</h3>
           <p className="mt-1 text-xs text-gray-500">
-            Drag the gold lines to cut off the top and bottom. Scroll to see the whole page.
+            {t('trim.help')}
           </p>
         </div>
 
@@ -108,7 +110,7 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
             <img
               ref={imgRef}
               src={imageData}
-              alt="Screenshot to trim"
+              alt={t('trim.alt')}
               draggable={false}
               onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
               className="block w-full"
@@ -118,18 +120,18 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
 
             <div style={handleStyle(top)} onPointerDown={handlePointerDown('top')}>
               <div className="w-full h-[3px] bg-[#C9A86C]" />
-              <span className="absolute left-2 px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]">Top</span>
+              <span className="absolute left-2 px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]">{t('trim.top')}</span>
             </div>
             <div style={handleStyle(bottom)} onPointerDown={handlePointerDown('bottom')}>
               <div className="w-full h-[3px] bg-[#C9A86C]" />
-              <span className="absolute left-2 px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]">Bottom</span>
+              <span className="absolute left-2 px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]">{t('trim.bottom')}</span>
             </div>
           </div>
         </div>
 
         <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
           <span className="text-xs text-gray-500">
-            {natural ? `${natural.w} x ${resultHeight} px` : 'Loading...'}
+            {natural ? `${natural.w} x ${resultHeight} px` : t('common.loading')}
           </span>
           <div className="flex gap-2">
             <button
@@ -137,7 +139,7 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
               onClick={onCancel}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -145,7 +147,7 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
               disabled={!natural}
               className="rounded-md bg-[#C9A86C] px-4 py-1.5 text-sm font-medium text-[#2C2417] hover:bg-[#B8975B] disabled:opacity-50"
             >
-              Apply
+              {t('common.apply')}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface TagChipRowProps {
   tags: { name: string; count: number }[];
@@ -9,6 +10,7 @@ interface TagChipRowProps {
 }
 
 export const TagChipRow: React.FC<TagChipRowProps> = ({ tags, total, selected, onChange, trailing }) => {
+  const { t } = useTranslation();
   const toggle = (name: string): void => {
     onChange(selected.includes(name) ? selected.filter((t) => t !== name) : [...selected, name]);
   };
@@ -23,7 +25,7 @@ export const TagChipRow: React.FC<TagChipRowProps> = ({ tags, total, selected, o
           selected.length === 0 ? 'bg-[#1F1F2E] text-white' : 'bg-white border border-[#E2D8C4] text-[#5E5A4E]'
         }`}
       >
-        All {total}
+        {t('common.all')} {total}
       </button>
       {tags.map((tag) => {
         const active = selected.includes(tag.name);

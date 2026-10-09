@@ -48,7 +48,7 @@ export interface Tag {
  */
 export interface Settings {
   defaultColor: HighlightColor;
-  interfaceLanguage: InterfaceLanguage;
+  language: LanguageSetting;
 }
 
 /**
@@ -65,7 +65,7 @@ export type HighlightColor =
 /**
  * Supported interface languages
  */
-export type InterfaceLanguage = 'en' | 'zh-TW' | 'fr';
+export type LanguageSetting = 'auto' | 'en' | 'zh-TW';
 
 /**
  * Color mapping for Tailwind CSS classes

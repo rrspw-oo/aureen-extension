@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sheet, SaveHint, FieldLabel } from '@/sidebar/ui/Sheet';
 import { TagInput, withPendingTag } from '@/sidebar/ui/TagInput';
 import { LinkPicker } from '@/sidebar/ui/LinkPicker';
@@ -55,6 +56,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
   onSave,
   onCancel
 }) => {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initial.title);
   const [note, setNote] = useState(initial.note);
   const [tags, setTags] = useState<string[]>(initial.tags);
@@ -91,7 +93,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
 
   return (
     <Sheet
-      title={isEdit ? 'Edit screenshot' : 'New screenshot'}
+      title={isEdit ? t('form.editScreenshot') : t('form.newScreenshot')}
       subtitle={hostOf(pageUrl)}
       onClose={onCancel}
       footer={
@@ -102,7 +104,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
             onClick={() => save()}
             className="ml-auto h-11 px-5 rounded-[10px] bg-[#C9A86C] hover:bg-[#B8975B] text-[#2C2417] text-sm font-semibold"
           >
-            Save screenshot
+            {t('form.saveScreenshot')}
           </button>
         </>
       }
@@ -117,16 +119,16 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
         }}
       >
         <div className="p-2 bg-[#FBFAF7] border border-[#ECE4D4] rounded-[10px]">
-          <img src={currentImage} alt="Screenshot preview" className="w-full max-h-48 object-contain rounded" />
+          <img src={currentImage} alt={t('form.previewAlt')} className="w-full max-h-48 object-contain rounded" />
           <div className="mt-2 flex justify-end gap-2">
             {fullPage && (
               <button
                 type="button"
                 onClick={() => setShowTrim(true)}
-                title="Cut off the top or bottom of this full-page screenshot"
+                title={t('form.trimTitle')}
                 className="h-8 px-3 rounded-lg bg-[#F4ECDD] hover:bg-[#E8DCC2] text-xs font-medium text-[#6E5428]"
               >
-                {trimmed ? 'Trim again' : 'Trim'}
+                {trimmed ? t('form.trimAgain') : t('form.trim')}
               </button>
             )}
             <button
@@ -139,24 +141,24 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
               }}
               className="h-8 px-3 rounded-lg bg-white border border-[#E2D8C4] hover:bg-[#F4F1EA] text-xs font-medium text-[#5E5A4E]"
             >
-              Download
+              {t('common.download')}
             </button>
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel htmlFor="cap-title" label="Title" hint="Card and PDF heading" />
+          <FieldLabel htmlFor="cap-title" label={t('form.title')} hint={t('form.titleHint')} />
           <input
             id="cap-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Optional, e.g. Desk lamp"
+            placeholder={t('form.titlePlaceholderCapture')}
             className="h-10 px-3 border border-[#E2D8C4] rounded-[9px] text-sm outline-none focus:border-[#C9A86C]"
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel label="Tags" hint="Filter, compare and export" />
+          <FieldLabel label={t('form.tags')} hint={t('form.tagsHintCapture')} />
           <TagInput
             tags={tags}
             onChange={setTags}
@@ -164,11 +166,11 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
             onPendingChange={setPendingTag}
             suggestions={suggestions.map((name) => ({ name }))}
             label={null}
-            placeholder="e.g. 比價, research"
+            placeholder={t('form.tagsPlaceholderCapture')}
             maxTags={Infinity}
           />
           <div className="flex items-center gap-1.5 flex-wrap">
-            {recent.length > 0 && <span className="text-[11px] text-[#6B6878]">Recent</span>}
+            {recent.length > 0 && <span className="text-[11px] text-[#6B6878]">{t('form.recent')}</span>}
             {recent.map((tag) => (
               <button
                 key={tag}
@@ -179,12 +181,12 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
                 {tag}
               </button>
             ))}
-            <span className="ml-auto text-[11px] text-[#6B6878]">Enter adds a tag</span>
+            <span className="ml-auto text-[11px] text-[#6B6878]">{t('form.enterAddsTag')}</span>
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel htmlFor="cap-price" label="Price" hint="Used by Compare" />
+          <FieldLabel htmlFor="cap-price" label={t('form.price')} hint={t('form.priceHint')} />
           <input
             id="cap-price"
             value={priceText}
@@ -192,25 +194,25 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
               setPriceText(e.target.value);
               setPriceError(false);
             }}
-            placeholder={initial.price ? '' : 'e.g. 1290 or NT$1,290'}
+            placeholder={initial.price ? '' : t('form.pricePlaceholder')}
             aria-invalid={priceError}
             className={`h-10 px-3 border rounded-[9px] text-sm outline-none ${priceError ? 'border-[#C0533F]' : 'border-[#E2D8C4] focus:border-[#C9A86C]'}`}
           />
           {priceError ? (
-            <span className="text-[11px] text-[#B5533F]">Enter a number such as 1290, or a price such as NT$1,290</span>
+            <span className="text-[11px] text-[#B5533F]">{t('form.priceError')}</span>
           ) : initial.price?.source === 'ocr' && priceText === initial.price.label ? (
-            <span className="text-[11px] text-[#6B6878]">Read from the screenshot text. Edit if it is wrong</span>
+            <span className="text-[11px] text-[#6B6878]">{t('form.priceFromOcr')}</span>
           ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel htmlFor="cap-note" label="Note" hint="Shown on the card and in the PDF" />
+          <FieldLabel htmlFor="cap-note" label={t('form.note')} hint={t('form.noteHint')} />
           <textarea
             id="cap-note"
             rows={3}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="What to remember about this"
+            placeholder={t('form.notePlaceholderCapture')}
             className="px-3 py-2.5 border border-[#E2D8C4] rounded-[9px] text-sm resize-none outline-none focus:border-[#C9A86C]"
           />
         </div>

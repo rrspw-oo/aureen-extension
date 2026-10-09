@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { imageCaptureStorage } from '@/lib/capture-store';
 import { storageService } from '@/lib/highlight-store';
 import { runOcrForCapture } from '@/lib/ocr';
@@ -26,6 +27,7 @@ type SheetState =
   | { kind: 'edit'; capture: ImageCapture };
 
 export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCaptureId, onNavigate, onFocusHandled }) => {
+  const { t } = useTranslation();
   const [captures, setCaptures] = useState<ImageCapture[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -116,7 +118,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
   };
 
   const handleDelete = async (captureId: string): Promise<void> => {
-    if (!confirm('Are you sure you want to delete this screenshot?')) return;
+    if (!confirm(t('captures.confirmDelete'))) return;
     await imageCaptureStorage.deleteCapture(captureId);
   };
 
@@ -152,7 +154,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
       closeSheet();
     } catch (error) {
       console.error('Failed to save capture:', error);
-      alert('Failed to save screenshot');
+      alert(t('captures.saveFailed'));
     }
   };
 
@@ -216,7 +218,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 pt-2.5 flex flex-col gap-2.5 flex-shrink-0">
-        <SearchField value={query} onChange={setQuery} placeholder="Search titles, notes, recognized text" />
+        <SearchField value={query} onChange={setQuery} placeholder={t('captures.search')} />
         {tagSummaries.length > 0 && (
           <TagChipRow
             tags={tagSummaries}
@@ -230,7 +232,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
                   onClick={() => setCompareTags(selectedTags)}
                   className="h-7 px-3 rounded-md bg-[#1F1F2E] text-white text-xs font-semibold"
                 >
-                  Compare
+                  {t('captures.compare')}
                 </button>
               )
             }
@@ -241,9 +243,9 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
       <main className="flex-1 min-h-0 overflow-y-auto px-4 pt-3.5 pb-4">
         {captures.length > 0 && filtered.length === 0 ? (
           <div className="text-center py-12 px-6">
-            <p className="text-[#1F1F2E] font-medium mb-1">No screenshots match</p>
+            <p className="text-[#1F1F2E] font-medium mb-1">{t('captures.noMatch')}</p>
             <button type="button" onClick={() => { setQuery(''); setSelectedTags([]); }} className="text-sm text-[#7E5F25] underline">
-              Clear search and filters
+              {t('highlights.clearFilters')}
             </button>
           </div>
         ) : (
@@ -268,7 +270,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
               className="min-h-[180px] border-[1.5px] border-dashed border-[#D9CDB4] rounded-xl flex flex-col items-center justify-center gap-2 text-[13px] font-medium text-[#6E5428] hover:bg-[#FBF4E6]"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6E5428" strokeWidth="1.8" strokeLinecap="round"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3" /></svg>
-              Capture a region
+              {t('captures.captureRegion')}
             </button>
           </div>
         )}
@@ -282,7 +284,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
           onClick={() => setShowExportDialog(true)}
           className="h-9 px-3.5 rounded-[9px] bg-[#C9A86C] hover:bg-[#B8975B] text-[#2C2417] text-[13px] font-semibold disabled:opacity-50"
         >
-          Export handbook
+          {t('captures.exportHandbook')}
         </button>
       </footer>
 
