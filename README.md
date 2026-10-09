@@ -30,6 +30,7 @@ But after closing tabs or switching tasks, you often forget:
 - Select any region on a webpage to capture
 - Automatically save screenshot source
 - Organize with tags (e.g., `#product`, `#reference`)
+- Recognize text in a saved screenshot offline (Traditional Chinese and English): hover a screenshot, click "Recognize text", then copy the result from the preview
 - Compare product images and prices across different websites
 
 ### Sidebar Management

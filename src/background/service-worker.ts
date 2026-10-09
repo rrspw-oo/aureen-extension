@@ -115,6 +115,27 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 });
 
+let offscreenCreating: Promise<void> | null = null;
+
+async function ensureOffscreenDocument(): Promise<void> {
+  const contexts = await chrome.runtime.getContexts({
+    contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT]
+  });
+  if (contexts.length > 0) {
+    return;
+  }
+  if (!offscreenCreating) {
+    offscreenCreating = chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: [chrome.offscreen.Reason.WORKERS],
+      justification: 'Run offline OCR on saved screenshots'
+    }).finally(() => {
+      offscreenCreating = null;
+    });
+  }
+  await offscreenCreating;
+}
+
 /**
  * Message handler for communication with content scripts and popup
  */
@@ -253,6 +274,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             console.error('Crop error:', error);
             sendResponse({ success: false, error: error instanceof Error ? error.message : 'Crop failed' });
           }
+          break;
+        }
+
+        case 'ocr-capture': {
+          await ensureOffscreenDocument();
+          const result = await chrome.runtime.sendMessage({
+            target: 'offscreen',
+            action: 'ocr-recognize',
+            imageData: message.imageData
+          });
+          sendResponse(result);
           break;
         }
 

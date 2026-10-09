@@ -11,15 +11,26 @@ interface ImageCaptureCardProps {
   capture: ImageCapture;
   onDelete: (id: string) => void;
   onEdit?: (capture: ImageCapture) => void;
+  onRecognize: (capture: ImageCapture) => void;
+  ocrRunning: boolean;
 }
 
 export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
   capture,
   onDelete,
-  onEdit
+  onEdit,
+  onRecognize,
+  ocrRunning
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyText = async (): Promise<void> => {
+    await navigator.clipboard.writeText(capture.ocrText || '');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   // Format relative time
   const getRelativeTime = (timestamp: number): string => {
@@ -61,6 +72,23 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
             className="absolute inset-0 w-full h-full object-cover"
           />
 
+          {ocrRunning ? (
+            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-black bg-opacity-60 text-white">
+              OCR...
+            </span>
+          ) : capture.ocrStatus === 'failed' ? (
+            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-red-600 text-white">
+              OCR failed
+            </span>
+          ) : capture.ocrStatus === 'done' && capture.ocrText ? (
+            <span
+              className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-[#A9863F] text-white"
+              title={capture.ocrText.slice(0, 200)}
+            >
+              text
+            </span>
+          ) : null}
+
           {/* Action buttons overlay */}
           {showActions && (
             <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center gap-1.5">
@@ -88,6 +116,20 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
                 >
                   <svg className="w-4 h-4 text-[#9A7B43]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {!ocrRunning && capture.ocrStatus !== 'done' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRecognize(capture);
+                  }}
+                  className="p-1.5 bg-white rounded-full hover:bg-[#FBF5EA] transition-colors"
+                  title="Recognize text"
+                >
+                  <svg className="w-4 h-4 text-[#9A7B43]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7V5h16v2M9 19h6M12 5v14" />
                   </svg>
                 </button>
               )}
@@ -222,6 +264,24 @@ export const ImageCaptureCard: React.FC<ImageCaptureCardProps> = ({
               <p className="text-xs text-gray-300">{capture.url}</p>
               {capture.linkedIds && capture.linkedIds.length > 0 && (
                 <p className="text-xs text-[#E0CFA0] mt-1">{capture.linkedIds.length} linked items</p>
+              )}
+              {capture.ocrStatus === 'done' && (
+                <div className="mt-3 pt-3 border-t border-white border-opacity-20" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-[#E0CFA0]">Recognized text</span>
+                    {capture.ocrText && (
+                      <button
+                        onClick={handleCopyText}
+                        className="px-2 py-0.5 text-xs bg-white bg-opacity-20 hover:bg-opacity-30 rounded transition-colors"
+                      >
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap max-h-48 overflow-y-auto">
+                    {capture.ocrText || 'No text found'}
+                  </p>
+                </div>
               )}
             </div>
           </div>

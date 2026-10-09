@@ -20,6 +20,9 @@ export default defineConfig({
     sourcemap: false,
     outDir: 'dist',
     rollupOptions: {
+      input: {
+        offscreen: resolve(__dirname, 'offscreen.html')
+      },
       output: {
         inlineDynamicImports: false,
         manualChunks: undefined

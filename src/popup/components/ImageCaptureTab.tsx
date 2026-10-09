@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { imageCaptureStorage } from '@/services/image-capture-storage';
+import { runOcrForCapture } from '@/services/ocr';
 import { formatBytes } from '@/services/screenshot';
 import type { ImageCapture, ImageTag } from '@/types/image-capture';
 import { ImageCaptureCard } from './ImageCaptureCard';
@@ -162,6 +163,8 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
   // Editing a saved capture
   const [editingCapture, setEditingCapture] = useState<ImageCapture | null>(null);
 
+  const [ocrRunningIds, setOcrRunningIds] = useState<string[]>([]);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -222,6 +225,19 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
     } else {
       const filtered = await imageCaptureStorage.getCapturesByTags(tagNames);
       setCaptures(filtered);
+    }
+  };
+
+  const handleRecognize = async (capture: ImageCapture): Promise<void> => {
+    setOcrRunningIds((prev) => [...prev, capture.id]);
+    try {
+      await runOcrForCapture(capture.id, capture.imageData);
+      const updated = await imageCaptureStorage.getCaptureById(capture.id);
+      if (updated) {
+        setCaptures((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      }
+    } finally {
+      setOcrRunningIds((prev) => prev.filter((id) => id !== capture.id));
     }
   };
 
@@ -692,6 +708,8 @@ export const ImageCaptureTab: React.FC<ImageCaptureTabProps> = ({ initialData })
                       capture={capture}
                       onDelete={handleDelete}
                       onEdit={setEditingCapture}
+                      onRecognize={handleRecognize}
+                      ocrRunning={ocrRunningIds.includes(capture.id)}
                     />
                   ))}
                 </div>
