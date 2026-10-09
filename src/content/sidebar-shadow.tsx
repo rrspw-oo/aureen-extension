@@ -12,6 +12,7 @@ import styles from '@/index.css?inline';
 import { showFab, hideFab } from './fab-bridge';
 import { exportImportService } from '@/services/export-import';
 import { storageService } from '@/services/storage';
+import { imageCaptureStorage } from '@/services/image-capture-storage';
 import { ExportHandbookDialog } from '@/popup/components/ExportHandbookDialog';
 import type { LinkKind } from '@/components/LinkedItems';
 
@@ -158,110 +159,55 @@ function sendDataToSidebar(): void {
   shadowRoot.dispatchEvent(event);
 }
 
-const HeaderIconButton: React.FC<{ title: string; onClick: () => void; children: React.ReactNode }> = ({ title, onClick, children }) => (
-  <button
-    title={title}
-    onClick={onClick}
-    style={{
-      background: 'rgba(0,0,0,0.07)', border: 'none', cursor: 'pointer',
-      width: '28px', height: '28px', display: 'flex',
-      alignItems: 'center', justifyContent: 'center',
-      borderRadius: '6px', transition: 'background 0.12s',
-    }}
-    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.13)')}
-    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.07)')}
-  >
-    {children}
-  </button>
-);
-
-
 const MenuAction: React.FC<{ label: string; onClick: () => void; danger?: boolean }> = ({ label, onClick, danger }) => (
   <button
+    type="button"
+    role="menuitem"
     onClick={onClick}
-    style={{
-      display: 'block', width: '100%', padding: '8px 14px',
-      textAlign: 'left', background: 'none', border: 'none',
-      cursor: 'pointer', fontSize: '13px',
-      color: danger ? '#C96A6A' : '#1F1F2E', fontFamily: 'inherit',
-      transition: 'background 0.1s',
-    }}
-    onMouseEnter={e => (e.currentTarget.style.background = '#F6EFE2')}
-    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+    className={`block w-full px-3.5 py-2 text-left text-[13px] hover:bg-[#F6EFE2] ${danger ? 'text-[#B5533F]' : 'text-[#1F1F2E]'}`}
   >
     {label}
   </button>
 );
 
-const BottomTabBar: React.FC<{ activeTab: TabType; onTabChange: (tab: TabType) => void }> = ({ activeTab, onTabChange }) => {
-  const GOLD = '#C9A86C';
-  const MUTED = '#9492A8';
+const IconButton: React.FC<{ label: string; onClick: () => void; children: React.ReactNode; expanded?: boolean }> = ({ label, onClick, children, expanded }) => (
+  <button
+    type="button"
+    aria-label={label}
+    title={label}
+    aria-expanded={expanded}
+    onClick={onClick}
+    className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#F4F1EA]"
+  >
+    {children}
+  </button>
+);
 
-  return (
-    <div style={{ display: 'flex', borderTop: '1px solid #EFE7D8', background: 'white', flexShrink: 0 }}>
-      <button
-        onClick={() => onTabChange('highlights')}
-        style={{
-          flex: 1, padding: '9px 0', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: '3px', border: 'none', background: 'none',
-          cursor: 'pointer', fontFamily: 'inherit',
-        }}
-      >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-          stroke={activeTab === 'highlights' ? GOLD : MUTED}
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        >
-          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-        <span style={{
-          fontSize: '10px',
-          color: activeTab === 'highlights' ? GOLD : MUTED,
-          fontWeight: activeTab === 'highlights' ? 600 : 400,
-        }}>
-          Highlights
-        </span>
-      </button>
-
-      <button
-        onClick={() => onTabChange('images')}
-        style={{
-          flex: 1, padding: '9px 0', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: '3px', border: 'none', background: 'none',
-          cursor: 'pointer', fontFamily: 'inherit',
-        }}
-      >
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
-          stroke={activeTab === 'images' ? GOLD : MUTED}
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        >
-          <rect x="2" y="6" width="20" height="14" rx="2"/>
-          <circle cx="12" cy="13" r="3"/>
-          <path d="M8 6l1.5-2.5h5L16 6"/>
-        </svg>
-        <span style={{
-          fontSize: '10px',
-          color: activeTab === 'images' ? GOLD : MUTED,
-          fontWeight: activeTab === 'images' ? 600 : 400,
-        }}>
-          Captures
-        </span>
-      </button>
-    </div>
-  );
-};
-
-/**
- * Sidebar App Component (wraps the main Sidebar with Tab switching)
- */
 const SidebarApp: React.FC = () => {
   const [data, setData] = useState<Record<string, unknown>>({});
   const [activeTab, setActiveTab] = useState<TabType>('highlights');
   const [focusTarget, setFocusTarget] = useState<{ kind: LinkKind; id: string } | null>(null);
+  const [counts, setCounts] = useState({ highlights: 0, captures: 0 });
+  const [openMenu, setOpenMenu] = useState<'export' | 'more' | null>(null);
+  const [handbookOpen, setHandbookOpen] = useState(false);
 
   const handleNavigate = (kind: LinkKind, id: string): void => {
     setActiveTab(kind === 'highlight' ? 'highlights' : 'images');
     setFocusTarget({ kind, id });
   };
+
+  useEffect(() => {
+    const loadCounts = async (): Promise<void> => {
+      const [highlights, captures] = await Promise.all([
+        storageService.getAllHighlights(),
+        imageCaptureStorage.getAllCaptures()
+      ]);
+      setCounts({ highlights: Object.keys(highlights).length, captures: captures.length });
+    };
+    loadCounts();
+    chrome.storage.onChanged.addListener(loadCounts);
+    return () => chrome.storage.onChanged.removeListener(loadCounts);
+  }, []);
 
   useEffect(() => {
     const handleData = (event: Event): void => {
@@ -273,6 +219,8 @@ const SidebarApp: React.FC = () => {
         setActiveTab(eventData.tab as TabType);
       } else if (eventData.mode === 'capture') {
         setActiveTab('images');
+      } else if (eventData.mode === 'highlight') {
+        setActiveTab('highlights');
       }
     };
 
@@ -282,7 +230,7 @@ const SidebarApp: React.FC = () => {
 
     const handleClose = (event: Event): void => {
       if ((event as CustomEvent).detail?.type === 'CLOSE_SIDEBAR') {
-        hideSidebarShadow();
+        hideSidebarShadow(true);
       }
     };
 
@@ -295,7 +243,7 @@ const SidebarApp: React.FC = () => {
       const origin = event.composedPath()[0] as HTMLElement | undefined;
       if (origin && (origin.tagName === 'INPUT' || origin.tagName === 'TEXTAREA' || origin.isContentEditable)) return;
       if (shadowRoot?.querySelector('[data-aureen-modal]')) return;
-      hideSidebarShadow();
+      hideSidebarShadow(true);
     };
 
     if (shadowRoot) {
@@ -311,16 +259,9 @@ const SidebarApp: React.FC = () => {
     };
   }, []);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [handbookOpen, setHandbookOpen] = useState(false);
-
-  const handleExport = async (): Promise<void> => {
-    const data = await exportImportService.exportAll();
-    exportImportService.downloadAsJson(data);
-  };
-
-  const handleExportMarkdown = async (groupBy: 'url' | 'tag'): Promise<void> => {
-    await exportImportService.downloadAsMarkdown({ groupBy });
+  const runMenu = (action: () => void): void => {
+    setOpenMenu(null);
+    action();
   };
 
   const handleClearAll = async (): Promise<void> => {
@@ -331,67 +272,72 @@ const SidebarApp: React.FC = () => {
     await storageService.clearAllData();
   };
 
+  const tabClass = (tab: TabType): string =>
+    `h-[34px] rounded-[7px] text-[13px] ${
+      activeTab === tab ? 'bg-white shadow-[0_1px_2px_rgba(31,26,12,0.08)] font-semibold text-[#1F1F2E]' : 'font-medium text-[#5E5A4E] hover:text-[#1F1F2E]'
+    }`;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-
-      <div style={{
-        padding: '0 12px', height: '48px', backgroundColor: '#F6EFE2',
-        borderBottom: '1px solid #ECE2CF',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-        position: 'relative',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-          <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#C9A86C', display: 'inline-block' }} />
-          <span style={{ fontSize: '16px', fontWeight: 600, color: '#1F1F2E', letterSpacing: '0.03em' }}>Aureen</span>
+    <div className="relative flex flex-col h-full bg-[#FBFAF7] text-[#1F1F2E]">
+      <header className="relative h-[52px] flex-shrink-0 pl-4 pr-3 flex items-center justify-between bg-white border-b border-[#ECE4D4]">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#C9A86C]" />
+          <span className="text-base font-semibold tracking-[0.02em]">Aureen</span>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <HeaderIconButton title="Minimize" onClick={() => hideSidebarShadow(true)}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <line x1="3" y1="8" x2="13" y2="8" stroke="#9A8A6A" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </HeaderIconButton>
-
-          <HeaderIconButton title="Close" onClick={() => hideSidebarShadow(false)}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M12 4L4 12M4 4l8 8" stroke="#9A8A6A" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </HeaderIconButton>
-
-          <HeaderIconButton title="Options" onClick={() => setMenuOpen(o => !o)}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="3" r="1.5" fill="#9A8A6A"/>
-              <circle cx="8" cy="8" r="1.5" fill="#9A8A6A"/>
-              <circle cx="8" cy="13" r="1.5" fill="#9A8A6A"/>
-            </svg>
-          </HeaderIconButton>
-        </div>
-
-        {menuOpen && (
-          <div
-            style={{
-              position: 'absolute', top: '48px', right: '12px',
-              background: 'white', border: '1px solid #EBE3D3',
-              borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-              minWidth: '160px', zIndex: 100, overflow: 'hidden',
-            }}
-            onMouseLeave={() => setMenuOpen(false)}
+        <div className="flex items-center gap-1">
+          <IconButton label="Export" expanded={openMenu === 'export'} onClick={() => setOpenMenu(openMenu === 'export' ? null : 'export')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M4 19h16" /></svg>
+          </IconButton>
+          <IconButton label="More" expanded={openMenu === 'more'} onClick={() => setOpenMenu(openMenu === 'more' ? null : 'more')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#5E5A4E"><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
+          </IconButton>
+          <button
+            type="button"
+            title="Close panel (Esc)"
+            onClick={() => hideSidebarShadow(true)}
+            className="h-8 px-2.5 flex items-center gap-1.5 border border-[#E2D8C4] rounded-lg bg-white text-xs font-medium text-[#5E5A4E] hover:bg-[#F4F1EA]"
           >
-            <MenuAction
-              label={activeTab === 'images' ? 'Export Handbook PDF' : 'Export Highlights PDF'}
-              onClick={() => { setMenuOpen(false); setHandbookOpen(true); }}
-            />
-            <div style={{ height: '1px', background: '#EBE3D3', margin: '4px 0' }} />
-            <MenuAction label="Export JSON" onClick={() => { setMenuOpen(false); handleExport(); }} />
-            <MenuAction label="Export by Page" onClick={() => { setMenuOpen(false); handleExportMarkdown('url'); }} />
-            <MenuAction label="Export by Tag" onClick={() => { setMenuOpen(false); handleExportMarkdown('tag'); }} />
-            <div style={{ height: '1px', background: '#EBE3D3', margin: '4px 0' }} />
-            <MenuAction label="Clear All" onClick={() => { setMenuOpen(false); handleClearAll(); }} danger />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            Close
+          </button>
+        </div>
+
+        {openMenu && (
+          <div
+            role="menu"
+            className="absolute top-12 right-3 z-[100] min-w-[220px] py-1 bg-white border border-[#ECE4D4] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
+            onMouseLeave={() => setOpenMenu(null)}
+          >
+            {openMenu === 'export' ? (
+              <>
+                <MenuAction
+                  label={activeTab === 'images' ? 'Screenshots handbook (PDF)' : 'Highlights handbook (PDF)'}
+                  onClick={() => runMenu(() => setHandbookOpen(true))}
+                />
+                <div className="h-px bg-[#ECE4D4] my-1" />
+                <MenuAction label="Highlights as JSON" onClick={() => runMenu(async () => exportImportService.downloadAsJson(await exportImportService.exportAll()))} />
+                <MenuAction label="Highlights as Markdown, by page" onClick={() => runMenu(() => exportImportService.downloadAsMarkdown({ groupBy: 'url' }))} />
+                <MenuAction label="Highlights as Markdown, by tag" onClick={() => runMenu(() => exportImportService.downloadAsMarkdown({ groupBy: 'tag' }))} />
+              </>
+            ) : (
+              <MenuAction label="Delete all highlights" onClick={() => runMenu(handleClearAll)} danger />
+            )}
           </div>
         )}
+      </header>
+
+      <div className="px-4 pt-3 flex-shrink-0">
+        <div role="tablist" className="grid grid-cols-2 gap-1 p-1 bg-[#F1EBDF] rounded-[10px]">
+          <button type="button" role="tab" aria-selected={activeTab === 'highlights'} onClick={() => setActiveTab('highlights')} className={tabClass('highlights')}>
+            Highlights <span className={activeTab === 'highlights' ? 'text-[#7E5F25]' : ''}>{counts.highlights}</span>
+          </button>
+          <button type="button" role="tab" aria-selected={activeTab === 'images'} onClick={() => setActiveTab('images')} className={tabClass('images')}>
+            Captures <span className={activeTab === 'images' ? 'text-[#7E5F25]' : ''}>{counts.captures}</span>
+          </button>
+        </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'hidden', background: '#FBFAF7' }}>
+      <div className="flex-1 min-h-0">
         {activeTab === 'highlights' ? (
           <Sidebar
             initialData={data}
@@ -408,8 +354,6 @@ const SidebarApp: React.FC = () => {
           />
         )}
       </div>
-
-      <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {handbookOpen && (
         <ExportHandbookDialog
