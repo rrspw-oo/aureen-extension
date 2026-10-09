@@ -11,6 +11,7 @@ import type {
   Settings
 } from '@/types';
 import { ErrorType, ExtensionError } from '@/types';
+import { normalizePageUrl } from '@/utils/url';
 
 /**
  * Default settings for new installations
@@ -46,8 +47,9 @@ class StorageService {
    */
   async getHighlightsByUrl(url: string): Promise<Highlight[]> {
     const allHighlights = await this.getAllHighlights();
+    const target = normalizePageUrl(url);
     return Object.values(allHighlights).filter(
-      (highlight) => highlight.url === url
+      (highlight) => normalizePageUrl(highlight.url) === target
     );
   }
 

@@ -6,15 +6,16 @@
 import {
   createHighlightPosition,
   restoreRangeFromPosition,
-  wrapTextWithHighlight,
-  removeHighlightById,
-  getAllHighlightMarks
+  wrapRangeWithHighlight,
+  removeHighlightById
 } from '@/utils/dom-helpers';
 import { generateSecureId } from '@/utils/security';
+import { normalizePageUrl } from '@/utils/url';
 import type { Highlight, HighlightColor } from '@/types';
 
 export class Highlighter {
   private highlights: Map<string, Highlight> = new Map();
+  private restoredIds: Set<string> = new Set();
 
   /**
    * Create a new highlight from selection
@@ -54,25 +55,12 @@ export class Highlighter {
    */
   applyHighlight(highlight: Highlight): boolean {
     try {
-      const range = restoreRangeFromPosition(highlight.position);
+      const range = restoreRangeFromPosition(highlight.position, highlight.text);
       if (!range) {
-        console.error('Failed to restore range for highlight:', highlight.id);
         return false;
       }
 
-      if (range.startContainer.nodeType !== Node.TEXT_NODE) {
-        console.error('Start container is not a text node');
-        return false;
-      }
-
-      const textNode = range.startContainer as Text;
-      wrapTextWithHighlight(
-        textNode,
-        range.startOffset,
-        range.endOffset,
-        highlight.id,
-        highlight.color
-      );
+      wrapRangeWithHighlight(range, highlight.id, highlight.color);
 
       this.attachHighlightEventListeners(highlight.id);
 
@@ -118,29 +106,24 @@ export class Highlighter {
    * Restore highlights for current page
    */
   restoreHighlights(highlights: Highlight[]): void {
-    this.clearAllHighlights();
+    const pageUrl = normalizePageUrl(window.location.href);
+    const current = highlights.filter((highlight) => normalizePageUrl(highlight.url) === pageUrl);
+    const currentIds = new Set(current.map((highlight) => highlight.id));
 
-    for (const highlight of highlights) {
-      if (highlight.url === window.location.href) {
-        this.highlights.set(highlight.id, highlight);
+    for (const id of this.restoredIds) {
+      if (!currentIds.has(id)) {
+        this.removeHighlight(id);
+        this.restoredIds.delete(id);
+      }
+    }
+
+    for (const highlight of current) {
+      this.highlights.set(highlight.id, highlight);
+      this.restoredIds.add(highlight.id);
+      if (!document.querySelector(`mark[data-highlight-id="${highlight.id}"]`)) {
         this.applyHighlight(highlight);
       }
     }
-  }
-
-  /**
-   * Clear all highlights from DOM
-   */
-  clearAllHighlights(): void {
-    const marks = getAllHighlightMarks();
-    marks.forEach((mark) => {
-      const highlightId = mark.dataset.highlightId;
-      if (highlightId) {
-        removeHighlightById(highlightId);
-      }
-    });
-
-    this.highlights.clear();
   }
 
   /**

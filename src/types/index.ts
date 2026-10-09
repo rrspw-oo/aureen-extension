@@ -10,6 +10,7 @@ export interface HighlightPosition {
   startOffset: number;
   endOffset: number;
   xpath: string;
+  endXpath?: string;
   textContent: string;
 }
 

@@ -107,56 +107,162 @@ export function getTextNodeAndOffset(
   return null;
 }
 
+function isHighlightMark(node: Node): boolean {
+  return node instanceof HTMLElement && node.tagName === 'MARK' && node.classList.contains('highlight-mark');
+}
+
+function anchorElement(node: Node): Element {
+  let element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement!;
+  while (isHighlightMark(element) && element.parentElement) {
+    element = element.parentElement;
+  }
+  return element;
+}
+
+function boundaryToAnchor(container: Node, offset: number): { xpath: string; offset: number } {
+  const anchor = anchorElement(container);
+  const range = document.createRange();
+  range.setStart(anchor, 0);
+  range.setEnd(container, offset);
+  return { xpath: getXPath(anchor), offset: range.toString().length };
+}
+
+function locateInElement(element: Node, offset: number): { node: Text; offset: number } | null {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let remaining = offset;
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    if (remaining <= node.length) {
+      return { node, offset: remaining };
+    }
+    remaining -= node.length;
+  }
+  return null;
+}
+
+function compactText(text: string): string {
+  return text.replace(/\s+/g, '');
+}
+
 /**
  * Create highlight position from selection
  */
 export function createHighlightPosition(selection: Selection): HighlightPosition | null {
-  const range = selection.getRangeAt(0);
-  if (!range) {
+  if (selection.rangeCount === 0) {
     return null;
   }
 
-  const startContainer = range.startContainer;
-
-  // Get XPath for start container
-  const xpath = getXPath(startContainer);
+  const range = selection.getRangeAt(0);
+  const start = boundaryToAnchor(range.startContainer, range.startOffset);
+  const end = boundaryToAnchor(range.endContainer, range.endOffset);
 
   return {
-    startOffset: range.startOffset,
-    endOffset: range.endOffset,
-    xpath,
+    xpath: start.xpath,
+    startOffset: start.offset,
+    endXpath: end.xpath,
+    endOffset: end.offset,
     textContent: range.toString()
   };
+}
+
+function rangeFromAnchors(position: HighlightPosition): Range | null {
+  const startElement = getNodeByXPath(position.xpath);
+  const endElement = getNodeByXPath(position.endXpath!);
+  if (!startElement || !endElement) {
+    return null;
+  }
+
+  const start = locateInElement(startElement, position.startOffset);
+  const end = locateInElement(endElement, position.endOffset);
+  if (!start || !end) {
+    return null;
+  }
+
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset);
+  return range;
+}
+
+function legacyRange(position: HighlightPosition): Range | null {
+  const node = getNodeByXPath(position.xpath);
+  if (!node) {
+    return null;
+  }
+
+  const startNode = getTextNodeAndOffset(node, position.startOffset);
+  const endNode = getTextNodeAndOffset(node, position.endOffset);
+  if (!startNode || !endNode) {
+    return null;
+  }
+
+  const range = document.createRange();
+  range.setStart(startNode.node, startNode.offset);
+  range.setEnd(endNode.node, endNode.offset);
+  return range;
+}
+
+function findRangeByText(text: string): Range | null {
+  const needle = compactText(text);
+  if (!needle) {
+    return null;
+  }
+
+  const chars: string[] = [];
+  const nodes: Text[] = [];
+  const offsets: number[] = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      const parent = node.parentElement;
+      return parent && !['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(parent.tagName)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
+    }
+  });
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const data = node.data;
+    for (let i = 0; i < data.length; i++) {
+      if (!/\s/.test(data[i])) {
+        chars.push(data[i]);
+        nodes.push(node);
+        offsets.push(i);
+      }
+    }
+  }
+
+  const index = chars.join('').indexOf(needle);
+  if (index < 0) {
+    return null;
+  }
+
+  const last = index + needle.length - 1;
+  const range = document.createRange();
+  range.setStart(nodes[index], offsets[index]);
+  range.setEnd(nodes[last], offsets[last] + 1);
+  return range;
 }
 
 /**
  * Restore range from highlight position
  */
 export function restoreRangeFromPosition(
-  position: HighlightPosition
+  position: HighlightPosition,
+  text: string
 ): Range | null {
+  let range: Range | null = null;
   try {
-    const node = getNodeByXPath(position.xpath);
-    if (!node) {
-      return null;
-    }
-
-    const range = document.createRange();
-    const startNode = getTextNodeAndOffset(node, position.startOffset);
-    const endNode = getTextNodeAndOffset(node, position.endOffset);
-
-    if (!startNode || !endNode) {
-      return null;
-    }
-
-    range.setStart(startNode.node, startNode.offset);
-    range.setEnd(endNode.node, endNode.offset);
-
-    return range;
-  } catch (error) {
-    console.error('Error restoring range:', error);
-    return null;
+    range = position.endXpath ? rangeFromAnchors(position) : legacyRange(position);
+  } catch {
+    range = null;
   }
+
+  if (range && compactText(range.toString()) === compactText(text)) {
+    return range;
+  }
+
+  return findRangeByText(text);
 }
 
 /**
@@ -225,27 +331,35 @@ export function isValidSelection(selection: Selection): boolean {
   return true;
 }
 
-/**
- * Wrap text node with highlight element
- */
-export function wrapTextWithHighlight(
-  textNode: Text,
-  startOffset: number,
-  endOffset: number,
-  highlightId: string,
-  color: string
-): HTMLElement {
-  const range = document.createRange();
-  range.setStart(textNode, startOffset);
-  range.setEnd(textNode, endOffset);
+export function wrapRangeWithHighlight(range: Range, highlightId: string, color: string): void {
+  const root = range.commonAncestorContainer;
+  const segments: { node: Text; start: number; end: number }[] = [];
 
-  const mark = document.createElement('mark');
-  mark.className = `highlight-mark ${color}`;
-  mark.dataset.highlightId = highlightId;
+  if (root.nodeType === Node.TEXT_NODE) {
+    segments.push({ node: root as Text, start: range.startOffset, end: range.endOffset });
+  } else {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      if (!range.intersectsNode(node)) continue;
+      const start = node === range.startContainer ? range.startOffset : 0;
+      const end = node === range.endContainer ? range.endOffset : node.length;
+      segments.push({ node, start, end });
+    }
+  }
 
-  range.surroundContents(mark);
-
-  return mark;
+  for (const { node, start, end } of segments) {
+    if (end <= start || !node.data.slice(start, end).trim()) continue;
+    const target = start > 0 ? node.splitText(start) : node;
+    if (end - start < target.length) {
+      target.splitText(end - start);
+    }
+    const mark = document.createElement('mark');
+    mark.className = `highlight-mark ${color}`;
+    mark.dataset.highlightId = highlightId;
+    target.parentNode!.insertBefore(mark, target);
+    mark.appendChild(target);
+  }
 }
 
 /**

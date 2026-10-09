@@ -92,6 +92,8 @@ function handleWindowMessage(event: MessageEvent): void {
   if (message.type === 'AUREEN_REMOVE_HIGHLIGHT' && message.highlightId) {
     // Remove temporary highlight from page
     highlighter.removeHighlight(message.highlightId);
+  } else if (message.type === 'AUREEN_SCROLL_TO_HIGHLIGHT' && message.highlightId) {
+    highlighter.scrollToHighlight(message.highlightId);
   } else if (message.type === 'AUREEN_START_SCREENSHOT') {
     // Start screenshot capture from sidebar
     startScreenshotCapture();
@@ -394,10 +396,7 @@ function requestHighlightsForPage(): void {
  * Restore highlights on page
  */
 function restoreHighlights(highlights: Highlight[]): void {
-  // Implementation will be in highlighter.ts
-  highlights.forEach(() => {
-    // Restore highlight logic here
-  });
+  highlighter.restoreHighlights(highlights);
 }
 
 /**
