@@ -1,5 +1,7 @@
 # Privacy Policy for Aureen
 
+[English](PRIVACY_POLICY.md) | [繁體中文](PRIVACY_POLICY.zh-TW.md)
+
 **Last Updated: October 9, 2026**
 
 ## Introduction
@@ -10,7 +12,7 @@ Aureen ("the Extension") is committed to protecting your privacy. This Privacy P
 
 ### What Data We Collect
 
-The Extension collects and stores the following data **locally on your device only**:
+The Extension stores the following data on your device. The only exception is noted under "How Data is Stored".
 
 1. **Text Highlights**
    - Selected text from webpages
@@ -38,10 +40,10 @@ The Extension collects and stores the following data **locally on your device on
 
 ### How Data is Stored
 
-- All data is stored **locally** using the Chrome Storage API
-- Data is stored on your device only and is **never transmitted** to any external servers
+- Highlights, screenshots, tags, recognized text, prices and the floating button position are stored with Chrome's local storage (`chrome.storage.local`) and stay on your device
+- Your two preferences, the default highlight color and the interface language, are stored with Chrome's sync storage (`chrome.storage.sync`). If you are signed in to Chrome with sync turned on, Chrome copies these two values to your other Chrome browsers through your Google account. Aureen itself never sends them anywhere
+- The Extension makes **no network requests** and has no server of its own
 - Data is **never shared** with third parties
-- Data is **never uploaded** to the cloud
 - We do not collect any analytics, usage statistics, or telemetry data
 
 ## Data Usage
@@ -51,13 +53,14 @@ The collected data is used exclusively for:
 - Displaying your saved highlights and screenshots
 - Organizing content with tags
 - Filtering and searching your saved items
+- Comparing screenshots that share a tag, sorted by price
 - Exporting your data as JSON, Markdown, or PDF files saved to your device
 
 ## Data Access
 
 - Only you have access to your data
-- The Extension does not transmit any data outside your browser
-- No remote servers are contacted for data storage or processing
+- The Extension does not transmit any data outside your browser, apart from Chrome's own sync of the two preferences described above
+- No remote servers are contacted for data storage or processing; text recognition runs offline with files bundled in the Extension
 - Your data remains entirely under your control
 
 ## Data Retention and Deletion
@@ -111,8 +114,7 @@ As a user, you have the right to:
 
 If you have any questions or concerns about this Privacy Policy, please contact us:
 
-- GitHub Issues: [Your GitHub Repository URL]
-- Email: [Your Contact Email]
+- GitHub Issues: https://github.com/rrspw-oo/Aureen/issues
 
 ## Compliance
 

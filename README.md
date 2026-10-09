@@ -1,183 +1,108 @@
-# Aureen - Reading Assistant Extension
+# Aureen
 
-## The Problem We Solve
+[English](README.md) | [繁體中文](README.zh-TW.md)
 
-When browsing articles or shopping online, you often need to:
-- Keep multiple browser tabs open
-- Copy text to external tools for organization
-- Remember which website had that product you liked
+Highlight text and screenshot anything on a web page, tag it, find it again later, and compare prices across shops. A Chrome extension. Everything stays on your machine.
 
-But after closing tabs or switching tasks, you often forget:
-- Where did I save that content?
-- Why did I copy this text?
-- Which website had that product?
+![Aureen sidebar next to an article with saved highlights](docs/images/en/hero.png)
 
-**Aureen** provides a simple solution: highlight text and capture screenshots directly in your browser, organize everything with tags, then quickly review all items with the same tag for price comparison, research, or note-taking.
+## Why
 
----
+I built Aureen for myself. Four things kept going wrong:
 
-## Core Features
+- I read with a dozen tabs open and copy passages into a notes app. A week later I have the text, but not the page it came from or the reason I saved it.
+- Some sites block text selection (e-book readers, previews). A screenshot is the only way to keep the passage, and a folder of screenshots cannot be searched.
+- Comparing the same product across three shops meant three tabs and a spreadsheet in my head.
+- I type Chinese with Zhuyin. In most tag fields I tried, pressing Enter to pick a character also submitted the form.
 
-### Text Highlighting
+Aureen is the smallest tool I could make that fixes those four, without an account and without sending anything to a server.
 
-- Highlight text on any webpage with one click, in champagne, mint, rose or sky. The color you pick last becomes the default
-- Saved highlights are marked again when you revisit the page, including selections that span bold text or links. If the page layout changed, Aureen finds the text again by its content. Links that differ only by `#section` or `utm_*` tracking parameters count as the same page
-- On a highlight card for the current page, click "Show on page" to scroll to that text
-- Automatically save source URL and page title
-- Organize with tags (e.g., `#shopping`, `#research`, `#todo`)
-- Export to Markdown or JSON format
+## What it does
 
-### Region Screenshot Capture
+- **Highlight.** Select text and pick a color in the toolbar. Highlights are marked again when you come back to the page. If the page changed, Aureen finds the passage by its text.
+- **Capture.** Screenshot a region, or a full page that stops where the article ends, then trim the top and bottom.
+- **Read screenshots.** Recognize text in a screenshot offline (Traditional Chinese and English), copy it, and search by it.
+- **Tag and find.** Search everything, filter by tag, and see highlights grouped by page with the page you are on first. Enter only adds a tag; it never saves the form.
+- **Compare.** Pick a tag and see its screenshots side by side, cheapest first. Prices are read from the screenshot text and can be corrected.
+- **Link.** Connect a highlight to a screenshot (a spec and a product photo, say) and jump between them.
+- **Export.** A PDF handbook for screenshots or highlights, plus JSON and Markdown for highlights.
+- **Two languages.** The interface follows your browser (English or Traditional Chinese) and can be switched in the menu.
 
-- Select any region on a webpage to capture
-- Capture a full page, or stop at a point you choose so ads and comments below the article are left out, then trim the top and bottom before saving
-- Automatically save screenshot source
-- Organize with tags (e.g., `#product`, `#reference`)
-- Recognize text in a saved screenshot offline (Traditional Chinese and English): hover a screenshot, click "Recognize text", then copy the result from the preview
-- Compare screenshots that share a tag side by side, sorted by price. Prices are read from recognized text automatically and can be edited
+| Selection toolbar | New highlight | Floating menu |
+|---|---|---|
+| ![Dark toolbar with color dots above selected text](docs/images/en/toolbar.png) | ![Bottom sheet form with title, tags and note](docs/images/en/sheet.png) | ![Floating button menu](docs/images/en/fab.png) |
 
-### Sidebar Management
+| Highlights | Captures | Compare by price |
+|---|---|---|
+| ![Highlights grouped by page](docs/images/en/highlights.png) | ![Screenshot grid with tags and prices](docs/images/en/captures.png) | ![Screenshots sorted by price with the lowest marked](docs/images/en/compare.png) |
 
-- Press `Alt+S` to open sidebar
-- Switch between Highlights and Captures at the top; each shows its count
-- Search text, titles, notes and recognized text; filter with tag chips (an item matches if it has any selected tag)
-- Highlights are grouped by page, with the page you are on listed first
-- Delete or export data with one click
-- Link related highlights and screenshots, then jump between them
+## Install
 
----
-
-## Installation
-
-### Manual Installation (Developer Mode)
-
-1. Clone or download this project:
-
-   ```bash
-   git clone <repository-url>
-   cd readingAssistant
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Build the extension:
-
-   ```bash
-   npm run build
-   ```
-
-4. Load into Chrome:
-   - Open `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the `dist` folder from the project
-
----
-
-## Usage Guide
-
-### Highlighting Text
-
-1. Select text on any webpage. A dark toolbar appears above it
-2. Click "Highlight", or a color dot to highlight in that color, or the note button to highlight and jump straight to the note field
-3. A form slides up in the sidebar - type a tag and press Enter, a comma (`,` `，` `、`), or a space to turn it into a tag chip. Enter never saves the form, so confirming a Zhuyin candidate is safe. Recently used tags are one click away under the field
-4. Click "Save highlight" (or press Cmd/Ctrl + Enter) to save. Text still in the tag field is saved as a tag. Esc discards the new highlight
-
-Each form field has a short note next to its label saying where it shows up (card, PDF handbook, filters).
-
-### Capturing Screenshots
-
-1. Click the extension icon to show the floating button, then choose "Capture region" (or use the "Capture a region" tile in the Captures tab)
-2. Drag to select the region you want to capture
-3. A form slides up - enter a title, tags, an optional price and notes
-4. Click "Save screenshot" to save
-
-### Comparing Prices
-
-1. In the Captures tab, select one or more tags and click "Compare"
-2. Screenshots with those tags are listed side by side, cheapest first, with the lowest marked
-3. A price comes from the screenshot's recognized text; click "Recognize text" on a row without a price. Click any price to correct it. A price you type always wins over the recognized one
-4. Highlights with the same tags are listed below for context
-
-### Capturing a Full Page
-
-1. Choose "Capture full page" from the floating button
-2. A bar appears at the top. Scroll until the dashed "Capture ends here" line sits where the capture should stop, then click "Capture to here". Click "Whole page" to capture everything, or "Cancel" (or Esc) to stop
-3. In the new screenshot form, click "Trim" to drag the top and bottom lines and cut off anything else, then "Apply"
-4. Click "Save screenshot"
-
-### Linking Related Items
-
-1. In a highlight or screenshot form, open "Link related items" and tick the related items. Items from the same page are listed first
-2. Links show on both sides: on a highlight card they are listed under the text; on a screenshot, open its preview
-3. Click a linked item to jump to it: highlights scroll into view and flash, screenshots open their preview
-
-### Showing and Hiding Aureen
-
-- Click the extension icon to show the floating button. Click it again to hide the floating button and the sidebar
-- "Close" in the sidebar header (or Esc) folds the sidebar back into the floating button. Esc does nothing while you type in a field or while a preview or form is open
-- Use "Hide" in the floating button menu to hide the button too
-
-### Managing and Filtering
-
-1. Press `Alt+S` to open sidebar
-2. Switch between "Highlights" and "Captures" at the top
-3. Search, or click tag chips to filter
-4. Use the export button in the header for the PDF handbook, JSON or Markdown (JSON and Markdown cover highlights), or "Export handbook" at the bottom of the Captures tab
-
----
-
-## Use Case Examples
-
-### Product Price Comparison
-
-When browsing similar products across multiple shopping websites:
-
-- Capture product images with tags like `#3C #comparison #laptop`
-- Highlight price and specifications
-- Later, select `#comparison` in the Captures tab and click "Compare" to see every product sorted by price
-
-### Research and Note-taking
-
-When reading multiple articles for research:
-
-- Highlight important passages with tags like `#paper #AI #references`
-- Capture important charts and diagrams with the same tags
-- Filter by specific tags to view all related content
-- Export to Markdown to create organized notes
-
-### Travel Planning
-
-When browsing travel information:
-
-- Capture photos of attractions with tags like `#Japan #Kyoto #sightseeing`
-- Highlight opening hours, ticket prices, and other details
-- Organize information by city using tags
-- Plan your itinerary with ease
-
----
-
-## Development Commands
+Aureen is not on the Chrome Web Store yet. To run it from source:
 
 ```bash
-npm run dev    # Development mode (with HMR support)
-npm run build  # Production build
+git clone https://github.com/rrspw-oo/Aureen.git
+cd Aureen
+npm install
+npm run build
 ```
 
----
+Then open `chrome://extensions`, turn on Developer mode, click **Load unpacked**, and pick the `dist` folder.
+
+## Use
+
+- Click the toolbar icon to show the floating button; click it again to hide everything. `Alt+S` opens the sidebar.
+- Select text to get the highlight toolbar. A color dot highlights in that color and becomes the default. The note button highlights and jumps to the note field.
+- In a form, Enter (or `,` `，` `、`) turns what you typed into a tag. Save with the button or `Cmd/Ctrl+Enter`. `Esc` discards.
+- **Capture full page** shows a bar at the top: scroll to where the capture should stop and click **Capture to here**.
+- In **Captures**, select a tag and click **Compare**. Click a price to fix it; a price you type always wins over a recognized one.
+- **Close** in the sidebar header (or `Esc`) folds it back into the floating button.
+
+## How it works
+
+Aureen is a Manifest V3 extension with four parts, split by where the code runs:
+
+```
+src/
+  background/   service worker: screenshots, stitching, message routing, offscreen OCR
+  offscreen/    hidden extension page that runs Tesseract for text recognition
+  page/         content script injected into every page: highlighter, toolbar,
+                floating button, region and full-page capture
+  sidebar/      React app in a Shadow DOM inside the page
+    highlights/ highlights list, cards and form
+    captures/   screenshot grid, form, trim and compare
+    ui/         small shared components (sheet, tag input, search, link picker)
+  lib/          storage, export, OCR client, price parsing, DOM helpers
+  i18n/         English and Traditional Chinese strings
+  types/        data shapes for highlights and screenshots
+```
+
+Data lives in `chrome.storage.local`. Highlights are stored with an XPath and character offsets for both ends of the selection, plus the text itself so they can be found again when the page changes. The longer version is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Privacy
+
+No account, no analytics, no network requests. Highlights, screenshots and settings are stored by Chrome on your device. Text recognition runs offline with the Tesseract files bundled in the extension. Details: [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+
+## Development
+
+```bash
+npm run dev                    # Vite dev build with reload
+npm run build                  # type-check and production build into dist/
+npm run type-check             # TypeScript only
+node --test tests/*.test.ts    # unit tests (Node 22.18+ or 23.6+ runs TypeScript directly)
+```
+
+The user interface is checked end to end by loading `dist` into Chrome with Playwright. Those scripts are not in the repository yet.
+
+## Limitations
+
+- Chrome only.
+- Storage is Chrome's local quota of 10 MB. Full-page screenshots are large and fill it quickly.
+- If the same passage appears twice on a page and the page layout has changed, the highlight is placed on the first match.
+- Text recognition covers Traditional Chinese and English, and the bundled models add about 15 MB to the extension.
+- Price reading takes the first amount next to a currency sign (NT$, $, 元 and others). Check it when a page shows an old and a sale price.
+- JSON and Markdown export cover highlights only. Screenshots export as a PDF handbook.
 
 ## License
 
-MIT License
-
----
-
-## Future Plans
-
-- Cloud synchronization
-- Custom highlight colors
-- Mobile companion app
+MIT
