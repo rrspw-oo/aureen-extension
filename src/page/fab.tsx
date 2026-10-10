@@ -33,8 +33,15 @@ function mountFab(): void {
   const styleEl = document.createElement('style');
   styleEl.textContent = styles + `
     @keyframes fabItemIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(12px) scale(0.88); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes labelIn {
+      from { opacity: 0; transform: translateX(6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fab-item, .fab-label, .fab-sun { animation: none !important; transition: none !important; }
     }
   `;
   fabShadowRoot.appendChild(styleEl);
@@ -54,42 +61,67 @@ function unmountFab(): void {
 
 registerFabFns(mountFab, unmountFab);
 
-const ICON_STROKE = '#6E5428';
+const PRIMARY = '#A9863F';
+const ACCENT = '#C9A86C';
 
 const ITEMS = [
   {
     label: 'fab.openLibrary',
-    hint: 'Alt S',
+    color: PRIMARY,
+    bg: 'linear-gradient(135deg, #D8BC85 0%, #B8975B 100%)',
+    shadow: 'rgba(169,134,63,0.42)',
     action: 'sidebar',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ICON_STROKE} strokeWidth="1.8">
-        <rect x="3" y="3" width="18" height="18" rx="3" />
-        <path d="M15 3v18" />
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="2" width="16" height="16" rx="3" stroke="white" strokeWidth="1.6" />
+        <line x1="13" y1="2" x2="13" y2="18" stroke="white" strokeWidth="1.6" />
       </svg>
     ),
   },
   {
     label: 'fab.captureRegion',
-    hint: '',
+    color: ACCENT,
+    bg: 'linear-gradient(135deg, #dfc08a 0%, #C9A86C 100%)',
+    shadow: 'rgba(201,168,108,0.45)',
     action: 'screenshot',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ICON_STROKE} strokeWidth="1.8" strokeLinecap="round">
-        <path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3" />
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <rect x="1" y="4" width="18" height="13" rx="2" stroke="white" strokeWidth="1.6" />
+        <circle cx="10" cy="10.5" r="3" stroke="white" strokeWidth="1.6" />
+        <path d="M7 4l1.5-2.5h3L13 4" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
     ),
   },
   {
     label: 'fab.captureFullPage',
-    hint: '',
+    color: ACCENT,
+    bg: 'linear-gradient(135deg, #dfc08a 0%, #C9A86C 100%)',
+    shadow: 'rgba(201,168,108,0.45)',
     action: 'fullpage',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={ICON_STROKE} strokeWidth="1.8" strokeLinecap="round">
-        <rect x="5" y="2" width="14" height="20" rx="2" />
-        <path d="M8 7h8M8 11h8M8 15h5" />
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="1" width="16" height="18" rx="2" stroke="white" strokeWidth="1.6" />
+        <line x1="5" y1="6" x2="15" y2="6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="5" y1="10" x2="15" y2="10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="5" y1="14" x2="11" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    label: 'fab.hide',
+    color: '#8A8578',
+    bg: 'linear-gradient(135deg, #C4BEB0 0%, #9B9587 100%)',
+    shadow: 'rgba(90,85,75,0.3)',
+    action: 'hide',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <path d="M5 5l10 10M15 5L5 15" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     ),
   },
 ];
+
+const SUN_RAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
 
 const FAB_SIZE = 52;
 const DRAG_THRESHOLD = 4;
@@ -114,26 +146,28 @@ function clampPosition(pos: FabPosition): FabPosition {
   };
 }
 
-const MENU_ROW: React.CSSProperties = {
-  height: '44px',
-  padding: '0 10px',
-  border: 'none',
-  borderRadius: '9px',
-  background: 'transparent',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  font: '500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  color: '#1F1F2E',
-  cursor: 'pointer',
-  textAlign: 'left',
-};
-
 const FabButton: React.FC = () => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [position, setPosition] = useState<FabPosition>(defaultPosition);
   const [dragging, setDragging] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setExpanded(false);
+    };
+    const onPointer = (e: PointerEvent): void => {
+      if (!rootRef.current?.contains(e.composedPath()[0] as Node)) setExpanded(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer, true);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer, true);
+    };
+  }, [expanded]);
 
   const dragState = useRef<{ startX: number; startY: number; originTop: number; originLeft: number; moved: boolean } | null>(null);
 
@@ -201,6 +235,7 @@ const FabButton: React.FC = () => {
 
   return (
     <div
+      ref={rootRef}
       style={{
         position: 'fixed',
         zIndex: 2147483647,
@@ -218,53 +253,77 @@ const FabButton: React.FC = () => {
           : { left: `${position.left}px` }),
       }}
     >
-      {expanded && !dragging && (
-        <div
-          role="menu"
-          aria-label={t('fab.menu')}
-          style={{
-            width: '216px',
-            padding: '6px',
-            background: '#FFFFFF',
-            border: '1px solid #ECE4D4',
-            borderRadius: '14px',
-            boxShadow: '0 12px 32px rgba(31,26,12,0.16)',
-            display: 'flex',
-            flexDirection: 'column',
-            animation: 'fabItemIn 0.18s ease-out both',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          }}
-        >
-          {ITEMS.map((item) => (
-            <button
-              key={item.action}
-              role="menuitem"
-              onClick={() => handleAction(item.action)}
-              style={MENU_ROW}
-              onMouseEnter={e => (e.currentTarget.style.background = '#FBF4E6')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      {expanded && !dragging && ITEMS.map((item, i) => {
+        const order = expandUp ? ITEMS.length - 1 - i : i;
+        return (
+          <button
+            key={item.action}
+            type="button"
+            role="menuitem"
+            className="fab-item"
+            onClick={() => handleAction(item.action)}
+            style={{
+              display: 'flex',
+              flexDirection: expandLeft ? 'row' : 'row-reverse',
+              alignItems: 'center',
+              gap: '10px',
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              animation: 'fabItemIn 0.22s cubic-bezier(0.34,1.56,0.64,1) both',
+              animationDelay: `${order * 45}ms`,
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            }}
+            onMouseEnter={e => {
+              const circle = e.currentTarget.querySelector<HTMLElement>('.fab-circle');
+              if (circle) circle.style.transform = 'scale(1.12)';
+            }}
+            onMouseLeave={e => {
+              const circle = e.currentTarget.querySelector<HTMLElement>('.fab-circle');
+              if (circle) circle.style.transform = 'scale(1)';
+            }}
+          >
+            <span
+              className="fab-label"
+              style={{
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                color: '#2C2417',
+                fontSize: '12px',
+                fontWeight: 600,
+                letterSpacing: '0.01em',
+                padding: '5px 11px',
+                borderRadius: '20px',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(31,26,12,0.16)',
+                animation: 'labelIn 0.18s ease-out both',
+                animationDelay: `${order * 45 + 40}ms`,
+              }}
+            >
+              {t(item.label)}
+            </span>
+            <span
+              className="fab-circle"
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: item.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 4px 14px ${item.shadow}, 0 1px 4px rgba(0,0,0,0.12)`,
+                transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
+                flexShrink: 0,
+              }}
             >
               {item.icon}
-              <span>{t(item.label)}</span>
-              {item.hint && <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#6B6878' }}>{item.hint}</span>}
-            </button>
-          ))}
-          <span style={{ height: '1px', background: '#ECE4D4', margin: '4px 6px' }} />
-          <button
-            role="menuitem"
-            onClick={() => handleAction('hide')}
-            style={{ ...MENU_ROW, height: '40px', fontSize: '13px', color: '#6B6878' }}
-            onMouseEnter={e => (e.currentTarget.style.background = '#F4F1EA')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6878" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M3 3l18 18" />
-              <path d="M10.6 5.1A10 10 0 0122 12a17 17 0 01-2.6 3.4M6.3 6.3A17 17 0 002 12s3.6 7 10 7a9.6 9.6 0 004.3-1" />
-            </svg>
-            <span>{t('fab.hide')}</span>
+            </span>
           </button>
-        </div>
-      )}
+        );
+      })}
 
       <button
         onPointerDown={handlePointerDown}
@@ -277,18 +336,45 @@ const FabButton: React.FC = () => {
           width: `${FAB_SIZE}px`,
           height: `${FAB_SIZE}px`,
           borderRadius: '50%',
-          background: '#1F1F2E',
+          background: 'linear-gradient(135deg, #D8BC85 0%, #C0A05B 100%)',
           border: 'none',
           cursor: dragging ? 'grabbing' : 'grab',
           touchAction: 'none',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 8px 20px rgba(31,31,46,0.28)',
+          boxShadow: expanded
+            ? '0 6px 24px rgba(201,168,108,0.6), 0 2px 8px rgba(31,26,12,0.18)'
+            : '0 4px 20px rgba(201,168,108,0.5), 0 1px 6px rgba(31,26,12,0.15)',
+          transition: 'box-shadow 0.18s ease',
           flexShrink: 0,
         }}
       >
-        <span style={{ font: '600 21px Georgia, "Times New Roman", serif', color: '#C9A86C', lineHeight: 1 }}>A</span>
+        <svg
+          className="fab-sun"
+          width="28"
+          height="28"
+          viewBox="0 0 28 28"
+          fill="none"
+          style={{
+            transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+            transform: expanded ? 'rotate(135deg)' : 'rotate(0deg)',
+          }}
+        >
+          <circle cx="14" cy="14" r="5" fill="white" />
+          {SUN_RAYS.map((deg) => (
+            <line
+              key={deg}
+              x1={14 + 7 * Math.cos((deg * Math.PI) / 180)}
+              y1={14 + 7 * Math.sin((deg * Math.PI) / 180)}
+              x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
+              y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          ))}
+        </svg>
       </button>
     </div>
   );

@@ -22,7 +22,7 @@ export const TagChipRow: React.FC<TagChipRowProps> = ({ tags, total, selected, o
         onClick={() => onChange([])}
         aria-pressed={selected.length === 0}
         className={`h-7 px-3 rounded-full text-xs font-semibold ${
-          selected.length === 0 ? 'bg-[#1F1F2E] text-white' : 'bg-white border border-[#E2D8C4] text-[#5E5A4E]'
+          selected.length === 0 ? 'bg-[#C9A86C] text-[#2C2417]' : 'bg-white border border-[#E2D8C4] text-[#5E5A4E]'
         }`}
       >
         {t('common.all')} {total}

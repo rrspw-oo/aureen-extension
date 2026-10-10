@@ -75,7 +75,7 @@ export const CompareView: React.FC<CompareViewProps> = ({ tags, captures, highli
       type="button"
       aria-pressed={sort === value}
       onClick={() => setSort(value)}
-      className={`h-7 px-2.5 rounded-md text-xs ${sort === value ? 'bg-[#1F1F2E] text-white font-semibold' : 'border border-[#E2D8C4] text-[#5E5A4E] font-medium'}`}
+      className={`h-7 px-2.5 rounded-md text-xs ${sort === value ? 'bg-[#C9A86C] text-[#2C2417] font-semibold' : 'border border-[#E2D8C4] text-[#5E5A4E] font-medium'}`}
     >
       {label}
     </button>

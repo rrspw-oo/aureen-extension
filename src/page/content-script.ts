@@ -214,9 +214,10 @@ function showToolbar(): void {
     align-items: center;
     gap: 4px;
     padding: 5px;
-    background: #1F1F2E;
+    background: #FFFFFF;
+    border: 1px solid #E2D8C4;
     border-radius: 12px;
-    box-shadow: 0 10px 28px rgba(31, 31, 46, 0.28);
+    box-shadow: 0 10px 28px rgba(31, 26, 12, 0.16);
     pointer-events: auto;
     font: 600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   `;
@@ -224,7 +225,7 @@ function showToolbar(): void {
 
   const divider = (): HTMLElement => {
     const line = document.createElement('span');
-    line.style.cssText = 'width: 1px; height: 22px; background: #3A3A4C; margin: 0 4px;';
+    line.style.cssText = 'width: 1px; height: 22px; background: #E2D8C4; margin: 0 4px;';
     return line;
   };
 
@@ -270,7 +271,8 @@ function showToolbar(): void {
       height: 22px;
       margin: 0 2px;
       border-radius: 50%;
-      border: ${item.color === defaultColor ? '2px solid #FFFFFF' : 'none'};
+      border: ${item.color === defaultColor ? '2px solid #A9863F' : '2px solid transparent'};
+      box-shadow: inset 0 0 0 1px rgba(44, 36, 23, 0.12);
       background: ${item.swatch};
       cursor: pointer;
     `;
@@ -305,7 +307,7 @@ function showToolbar(): void {
   noteIcon.setAttribute('height', '17');
   noteIcon.setAttribute('viewBox', '0 0 24 24');
   noteIcon.setAttribute('fill', 'none');
-  noteIcon.setAttribute('stroke', '#E8E6F0');
+  noteIcon.setAttribute('stroke', '#6E5428');
   noteIcon.setAttribute('stroke-width', '1.8');
   noteIcon.setAttribute('stroke-linejoin', 'round');
   const notePath = document.createElementNS(svgNs, 'path');

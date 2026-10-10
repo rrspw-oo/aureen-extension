@@ -230,7 +230,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
                 <button
                   type="button"
                   onClick={() => setCompareTags(selectedTags)}
-                  className="h-7 px-3 rounded-md bg-[#1F1F2E] text-white text-xs font-semibold"
+                  className="h-7 px-3 rounded-md bg-[#C9A86C] hover:bg-[#B8975B] text-[#2C2417] text-xs font-semibold"
                 >
                   {t('captures.compare')}
                 </button>
