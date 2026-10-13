@@ -114,4 +114,5 @@ Tesseract 的 worker、WebAssembly 核心與語言資料，都是從 `public/tes
 ## 測試
 
 - `node --test tests/*.test.ts` 執行單元測試。
-- 介面測試是用 Playwright 把 `dist` 載入 Chrome，在真實網頁上操作：劃重點、重新整理與版面改變後的還原、輸入法選字時的標籤輸入、截圖、裁切、OCR、比價，以及兩種語言。Chrome 137 之後會忽略 `--load-extension`，所以測試腳本改用 DevTools Protocol 的 `Extensions.loadUnpacked` 指令，搭配 `--enable-unsafe-extension-debugging` 參數載入擴充功能。
+- `tests/e2e/*.test.mjs` 用 Playwright 把 `dist` 載入 Chrome，操作 `tests/e2e/site` 裡的測試網頁：劃重點、重新整理與版面改變後的還原、輸入法選字時的標籤輸入、截圖、裁切、OCR、比價、語言切換、刪除全部重點，以及浮動按鈕的動畫。Chrome 137 之後會忽略 `--load-extension`，所以 `helpers.mjs` 改用 DevTools Protocol 的 `Extensions.loadUnpacked` 指令，搭配 `--enable-unsafe-extension-debugging` 參數載入擴充功能，並在 8766 連接埠提供測試網頁。各組測試共用這個連接埠，請一次跑一組。
+- `tests/e2e/shots/docs-shots.mjs en|zh-TW` 會重新產生 README 的截圖。

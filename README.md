@@ -92,7 +92,7 @@ npm run type-check             # TypeScript only
 node --test tests/*.test.ts    # unit tests (Node 22.18+ or 23.6+ runs TypeScript directly)
 ```
 
-The user interface is checked end to end by loading `dist` into Chrome with Playwright. Those scripts are not in the repository yet.
+The user interface is checked end to end by loading `dist` into the system Chrome with Playwright and driving real pages. The scripts and their fixture pages are in [tests/e2e](tests/e2e/README.md); run one with `node tests/e2e/interface.test.mjs` after a build.
 
 ## Limitations
 

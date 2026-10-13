@@ -114,4 +114,5 @@ Strings live in `src/i18n/locales/en.json` and `zh-TW.json`, which must have the
 ## Testing
 
 - `node --test tests/*.test.ts` runs the unit tests.
-- The interface is tested by loading `dist` into Chrome through Playwright and driving real pages: highlighting, restoring after reload and after layout changes, tag input with composition events, capture, trim, OCR, compare and both languages. Chrome 137 and later ignore `--load-extension`, so the scripts load the extension with the DevTools Protocol command `Extensions.loadUnpacked` and the `--enable-unsafe-extension-debugging` flag.
+- `tests/e2e/*.test.mjs` load `dist` into Chrome through Playwright and drive the fixture pages in `tests/e2e/site`: highlighting, restoring after reload and after layout changes, tag input with composition events, capture, trim, OCR, compare, the language switch, the delete-all action and the floating button animation. Chrome 137 and later ignore `--load-extension`, so `helpers.mjs` loads the extension with the DevTools Protocol command `Extensions.loadUnpacked` and the `--enable-unsafe-extension-debugging` flag, and serves the fixtures on port 8766. Run the suites one at a time; they share that port.
+- `tests/e2e/shots/docs-shots.mjs en|zh-TW` regenerates the README screenshots.

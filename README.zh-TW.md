@@ -92,7 +92,7 @@ npm run type-check             # 只做 TypeScript 型別檢查
 node --test tests/*.test.ts    # 單元測試（Node 22.18+ 或 23.6+ 可直接執行 TypeScript）
 ```
 
-介面的端對端測試是用 Playwright 把 `dist` 載入 Chrome 實際操作，這些腳本目前還沒放進 repo。
+介面的端對端測試是用 Playwright 把 `dist` 載入系統的 Chrome，在真實網頁上實際操作。腳本和測試用網頁放在 [tests/e2e](tests/e2e/README.md)，建置後執行 `node tests/e2e/interface.test.mjs` 就能跑其中一組。
 
 ## 限制
 
