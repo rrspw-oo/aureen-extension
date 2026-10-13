@@ -40,9 +40,6 @@ function mountFab(): void {
       from { opacity: 0; transform: translateX(6px); }
       to   { opacity: 1; transform: translateX(0); }
     }
-    @media (prefers-reduced-motion: reduce) {
-      .fab-item, .fab-label, .fab-sun { animation: none !important; transition: none !important; }
-    }
   `;
   fabShadowRoot.appendChild(styleEl);
 
@@ -61,61 +58,53 @@ function unmountFab(): void {
 
 registerFabFns(mountFab, unmountFab);
 
-const PRIMARY = '#A9863F';
-const ACCENT = '#C9A86C';
+const GOLD_INK = '#9A7B43';
+const MUTED_INK = '#8A8578';
 
 const ITEMS = [
   {
     label: 'fab.openLibrary',
-    color: PRIMARY,
-    bg: 'linear-gradient(135deg, #D8BC85 0%, #B8975B 100%)',
-    shadow: 'rgba(169,134,63,0.42)',
+    iconColor: GOLD_INK,
     action: 'sidebar',
     icon: (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <rect x="2" y="2" width="16" height="16" rx="3" stroke="white" strokeWidth="1.6" />
-        <line x1="13" y1="2" x2="13" y2="18" stroke="white" strokeWidth="1.6" />
+        <rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
+        <line x1="13" y1="2" x2="13" y2="18" stroke="currentColor" strokeWidth="1.6" />
       </svg>
     ),
   },
   {
     label: 'fab.captureRegion',
-    color: ACCENT,
-    bg: 'linear-gradient(135deg, #dfc08a 0%, #C9A86C 100%)',
-    shadow: 'rgba(201,168,108,0.45)',
+    iconColor: GOLD_INK,
     action: 'screenshot',
     icon: (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <rect x="1" y="4" width="18" height="13" rx="2" stroke="white" strokeWidth="1.6" />
-        <circle cx="10" cy="10.5" r="3" stroke="white" strokeWidth="1.6" />
-        <path d="M7 4l1.5-2.5h3L13 4" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+        <rect x="1" y="4" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="10" cy="10.5" r="3" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M7 4l1.5-2.5h3L13 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
     ),
   },
   {
     label: 'fab.captureFullPage',
-    color: ACCENT,
-    bg: 'linear-gradient(135deg, #dfc08a 0%, #C9A86C 100%)',
-    shadow: 'rgba(201,168,108,0.45)',
+    iconColor: GOLD_INK,
     action: 'fullpage',
     icon: (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <rect x="2" y="1" width="16" height="18" rx="2" stroke="white" strokeWidth="1.6" />
-        <line x1="5" y1="6" x2="15" y2="6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="5" y1="10" x2="15" y2="10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="5" y1="14" x2="11" y2="14" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        <rect x="2" y="1" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.6" />
+        <line x1="5" y1="6" x2="15" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="5" y1="10" x2="15" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="5" y1="14" x2="11" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
   },
   {
     label: 'fab.hide',
-    color: '#8A8578',
-    bg: 'linear-gradient(135deg, #C4BEB0 0%, #9B9587 100%)',
-    shadow: 'rgba(90,85,75,0.3)',
+    iconColor: MUTED_INK,
     action: 'hide',
     icon: (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <path d="M5 5l10 10M15 5L5 15" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -277,27 +266,26 @@ const FabButton: React.FC = () => {
             }}
             onMouseEnter={e => {
               const circle = e.currentTarget.querySelector<HTMLElement>('.fab-circle');
-              if (circle) circle.style.transform = 'scale(1.12)';
+              if (circle) { circle.style.transform = 'scale(1.12)'; circle.style.background = '#FBF4E6'; }
             }}
             onMouseLeave={e => {
               const circle = e.currentTarget.querySelector<HTMLElement>('.fab-circle');
-              if (circle) circle.style.transform = 'scale(1)';
+              if (circle) { circle.style.transform = 'scale(1)'; circle.style.background = '#FFFFFF'; }
             }}
           >
             <span
               className="fab-label"
               style={{
-                background: 'rgba(255,255,255,0.92)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                color: '#2C2417',
+                background: '#F4ECDD',
+                color: '#6E5428',
                 fontSize: '12px',
                 fontWeight: 600,
                 letterSpacing: '0.01em',
                 padding: '5px 11px',
                 borderRadius: '20px',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 2px 8px rgba(31,26,12,0.16)',
+                border: '1px solid #E8DCC2',
+                boxShadow: '0 2px 8px rgba(31,26,12,0.10)',
                 animation: 'labelIn 0.18s ease-out both',
                 animationDelay: `${order * 45 + 40}ms`,
               }}
@@ -310,12 +298,14 @@ const FabButton: React.FC = () => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: item.bg,
+                background: '#FFFFFF',
+                border: '1px solid #E2D8C4',
+                color: item.iconColor,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: `0 4px 14px ${item.shadow}, 0 1px 4px rgba(0,0,0,0.12)`,
-                transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
+                boxShadow: '0 4px 14px rgba(201,168,108,0.22), 0 1px 4px rgba(31,26,12,0.10)',
+                transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1), background 0.15s',
                 flexShrink: 0,
               }}
             >
@@ -336,7 +326,7 @@ const FabButton: React.FC = () => {
           width: `${FAB_SIZE}px`,
           height: `${FAB_SIZE}px`,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #D8BC85 0%, #C0A05B 100%)',
+          background: 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.38), rgba(255,255,255,0) 58%), linear-gradient(135deg, #D8BC85 0%, #B8975B 100%)',
           border: 'none',
           cursor: dragging ? 'grabbing' : 'grab',
           touchAction: 'none',
@@ -344,8 +334,8 @@ const FabButton: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: expanded
-            ? '0 6px 24px rgba(201,168,108,0.6), 0 2px 8px rgba(31,26,12,0.18)'
-            : '0 4px 20px rgba(201,168,108,0.5), 0 1px 6px rgba(31,26,12,0.15)',
+            ? 'inset 0 0 0 1px rgba(255,255,255,0.4), 0 6px 24px rgba(201,168,108,0.55), 0 2px 8px rgba(31,26,12,0.18)'
+            : 'inset 0 0 0 1px rgba(255,255,255,0.4), 0 4px 20px rgba(201,168,108,0.45), 0 1px 6px rgba(31,26,12,0.15)',
           transition: 'box-shadow 0.18s ease',
           flexShrink: 0,
         }}
@@ -357,8 +347,8 @@ const FabButton: React.FC = () => {
           viewBox="0 0 28 28"
           fill="none"
           style={{
-            transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-            transform: expanded ? 'rotate(135deg)' : 'rotate(0deg)',
+            transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+            transform: expanded ? 'rotate(135deg) scale(0.9)' : 'rotate(0deg) scale(1)',
           }}
         >
           <circle cx="14" cy="14" r="5" fill="white" />
@@ -369,7 +359,7 @@ const FabButton: React.FC = () => {
               y1={14 + 7 * Math.sin((deg * Math.PI) / 180)}
               x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
               y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
-              stroke="white"
+              stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
             />
