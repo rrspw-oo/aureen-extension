@@ -326,7 +326,7 @@ const FabButton: React.FC = () => {
           width: `${FAB_SIZE}px`,
           height: `${FAB_SIZE}px`,
           borderRadius: '50%',
-          background: 'linear-gradient(180deg, #FFCB5C 0%, #F2A93B 100%)',
+          background: 'linear-gradient(180deg, #F6DFB2 0%, #D9B377 100%)',
           border: 'none',
           color: '#FFFFFF',
           cursor: dragging ? 'grabbing' : 'grab',
@@ -335,8 +335,8 @@ const FabButton: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: expanded
-            ? 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(180,110,20,0.18), 0 0 0 0.5px rgba(180,110,20,0.35), 0 2px 4px rgba(150,95,20,0.18), 0 14px 30px -8px rgba(242,169,59,0.8)'
-            : 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(180,110,20,0.18), 0 0 0 0.5px rgba(180,110,20,0.35), 0 1px 2px rgba(150,95,20,0.18), 0 10px 24px -8px rgba(242,169,59,0.7)',
+            ? 'inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(190,140,70,0.2), 0 0 0 0.5px rgba(190,140,70,0.4), 0 2px 4px rgba(190,140,70,0.22), 0 14px 30px -8px rgba(190,140,70,0.7)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(190,140,70,0.2), 0 0 0 0.5px rgba(190,140,70,0.4), 0 1px 2px rgba(190,140,70,0.2), 0 10px 24px -8px rgba(190,140,70,0.6)',
           transition: 'box-shadow 0.18s ease',
           flexShrink: 0,
         }}
