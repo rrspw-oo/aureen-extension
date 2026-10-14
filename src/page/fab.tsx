@@ -359,7 +359,7 @@ const FabButton: React.FC = () => {
               y1={14 + 7 * Math.sin((deg * Math.PI) / 180)}
               x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
               y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
-              stroke="currentColor"
+              stroke="#FFFFFF"
               strokeWidth="1.5"
               strokeLinecap="round"
             />
