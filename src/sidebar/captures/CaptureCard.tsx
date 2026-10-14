@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getRelativeTime } from '@/lib/date';
+import { saveCaptureAsPdf } from '@/lib/capture-pdf';
 import type { ImageCapture } from '@/types/image-capture';
 import { LinkedItems, type LinkEntry, type LinkKind } from '@/sidebar/ui/LinkedItems';
 import { COLORS } from '@/sidebar/ui/theme';
@@ -168,6 +169,16 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  saveCaptureAsPdf(capture.imageData, capture.title).catch(() => alert(t('common.pdfFailed')));
+                }}
+                className="p-1.5 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                title={t('common.savePdf')}
+              >
+                <span className="block px-0.5 text-[10px] font-bold leading-4 text-gray-700">PDF</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
                   onDelete(capture.id);
                 }}
                 className="p-1.5 bg-white rounded-full hover:bg-red-50 transition-colors"
@@ -260,6 +271,16 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  saveCaptureAsPdf(capture.imageData, capture.title).catch(() => alert(t('common.pdfFailed')));
+                }}
+                className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors"
+                title={t('common.savePdf')}
+              >
+                <span className="block px-0.5 text-[10px] font-bold leading-4 text-white">PDF</span>
               </button>
               <button
                 onClick={() => setShowLightbox(false)}

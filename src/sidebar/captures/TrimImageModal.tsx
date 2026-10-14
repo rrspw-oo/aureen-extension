@@ -11,12 +11,14 @@ interface TrimImageModalProps {
   onApply: (dataUrl: string) => void;
 }
 
-type Edge = 'top' | 'bottom';
+type Edge = 'top' | 'bottom' | 'left' | 'right';
 
 export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCancel, onApply }) => {
   const { t } = useTranslation();
   const [top, setTop] = useState(0);
   const [bottom, setBottom] = useState(1);
+  const [left, setLeft] = useState(0);
+  const [right, setRight] = useState(1);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,12 +51,12 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
     if (e.clientY < box.top + EDGE_PX) scroller.scrollBy(0, -SCROLL_STEP);
 
     const rect = img.getBoundingClientRect();
-    const fraction = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
-    if (edge === 'top') {
-      setTop(Math.min(fraction, bottom - MIN_FRACTION));
-    } else {
-      setBottom(Math.max(fraction, top + MIN_FRACTION));
-    }
+    const fy = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    if (edge === 'top') setTop(Math.min(fy, bottom - MIN_FRACTION));
+    else if (edge === 'bottom') setBottom(Math.max(fy, top + MIN_FRACTION));
+    else if (edge === 'left') setLeft(Math.min(fx, right - MIN_FRACTION));
+    else setRight(Math.max(fx, left + MIN_FRACTION));
   };
 
   const handlePointerUp = (): void => {
@@ -64,28 +66,32 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
   const handleApply = (): void => {
     const img = imgRef.current;
     if (!img || !natural) return;
+    const sx = Math.round(left * natural.w);
     const sy = Math.round(top * natural.h);
-    const sh = Math.round((bottom - top) * natural.h);
+    const sw = Math.max(1, Math.round((right - left) * natural.w));
+    const sh = Math.max(1, Math.round((bottom - top) * natural.h));
     const canvas = document.createElement('canvas');
-    canvas.width = natural.w;
+    canvas.width = sw;
     canvas.height = sh;
-    canvas.getContext('2d')!.drawImage(img, 0, sy, natural.w, sh, 0, 0, natural.w, sh);
+    canvas.getContext('2d')!.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
     onApply(canvas.toDataURL('image/jpeg', 0.95));
   };
 
-  const handleStyle = (fraction: number): React.CSSProperties => ({
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: `${fraction * 100}%`,
-    height: '20px',
-    transform: 'translateY(-50%)',
-    cursor: 'ns-resize',
-    touchAction: 'none',
-    display: 'flex',
-    alignItems: 'center',
-  });
+  const handleStyle = (edge: Edge, fraction: number): React.CSSProperties => {
+    const horizontal = edge === 'top' || edge === 'bottom';
+    return {
+      position: 'absolute',
+      touchAction: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...(horizontal
+        ? { left: 0, right: 0, top: `${fraction * 100}%`, height: '20px', transform: 'translateY(-50%)', cursor: 'ns-resize' }
+        : { top: 0, bottom: 0, left: `${fraction * 100}%`, width: '20px', transform: 'translateX(-50%)', cursor: 'ew-resize' }),
+    };
+  };
 
+  const resultWidth = natural ? Math.round((right - left) * natural.w) : 0;
   const resultHeight = natural ? Math.round((bottom - top) * natural.h) : 0;
 
   return (
@@ -117,21 +123,29 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
             />
             <div className="absolute left-0 right-0 top-0 bg-black/55 pointer-events-none" style={{ height: `${top * 100}%` }} />
             <div className="absolute left-0 right-0 bottom-0 bg-black/55 pointer-events-none" style={{ height: `${(1 - bottom) * 100}%` }} />
+            <div className="absolute bg-black/55 pointer-events-none" style={{ left: 0, width: `${left * 100}%`, top: `${top * 100}%`, bottom: `${(1 - bottom) * 100}%` }} />
+            <div className="absolute bg-black/55 pointer-events-none" style={{ right: 0, width: `${(1 - right) * 100}%`, top: `${top * 100}%`, bottom: `${(1 - bottom) * 100}%` }} />
 
-            <div style={handleStyle(top)} onPointerDown={handlePointerDown('top')}>
-              <div className="w-full h-[3px] bg-[#C9A86C]" />
-              <span className="absolute left-2 px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]">{t('trim.top')}</span>
-            </div>
-            <div style={handleStyle(bottom)} onPointerDown={handlePointerDown('bottom')}>
-              <div className="w-full h-[3px] bg-[#C9A86C]" />
-              <span className="absolute left-2 px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]">{t('trim.bottom')}</span>
-            </div>
+            {([['top', top], ['bottom', bottom], ['left', left], ['right', right]] as [Edge, number][]).map(([edge, value]) => {
+              const horizontal = edge === 'top' || edge === 'bottom';
+              return (
+                <div key={edge} style={handleStyle(edge, value)} onPointerDown={handlePointerDown(edge)}>
+                  <div className={horizontal ? 'w-full h-[3px] bg-[#C9A86C]' : 'h-full w-[3px] bg-[#C9A86C]'} />
+                  <span
+                    className="absolute px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]"
+                    style={horizontal ? { left: 8 } : { top: 8 }}
+                  >
+                    {t(`trim.${edge}`)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
           <span className="text-xs text-gray-500">
-            {natural ? `${natural.w} x ${resultHeight} px` : t('common.loading')}
+            {natural ? `${resultWidth} x ${resultHeight} px` : t('common.loading')}
           </span>
           <div className="flex gap-2">
             <button

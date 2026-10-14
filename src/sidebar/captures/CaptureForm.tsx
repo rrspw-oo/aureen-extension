@@ -4,6 +4,7 @@ import { Sheet, SaveHint, FieldLabel } from '@/sidebar/ui/Sheet';
 import { TagInput, withPendingTag } from '@/sidebar/ui/TagInput';
 import { LinkPicker } from '@/sidebar/ui/LinkPicker';
 import { TrimImageModal } from '@/sidebar/captures/TrimImageModal';
+import { saveCaptureAsPdf } from '@/lib/capture-pdf';
 import { extractPrice, parsePriceInput } from '@/lib/price';
 import type { Highlight } from '@/types/highlight';
 import type { CapturePrice, ImageCapture } from '@/types/image-capture';
@@ -21,7 +22,6 @@ interface CaptureFormProps {
   isEdit: boolean;
   selfId: string;
   imageData: string;
-  fullPage: boolean;
   pageUrl: string;
   ocrText?: string;
   initial: { title: string; note: string; tags: string[]; linkedIds: string[]; price?: CapturePrice };
@@ -45,7 +45,6 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
   isEdit,
   selfId,
   imageData,
-  fullPage,
   pageUrl,
   ocrText,
   initial,
@@ -121,16 +120,14 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
         <div className="p-2 bg-[#FBFAF7] border border-[#ECE4D4] rounded-[10px]">
           <img src={currentImage} alt={t('form.previewAlt')} className="w-full max-h-48 object-contain rounded" />
           <div className="mt-2 flex justify-end gap-2">
-            {fullPage && (
-              <button
-                type="button"
-                onClick={() => setShowTrim(true)}
-                title={t('form.trimTitle')}
-                className="h-8 px-3 rounded-lg bg-[#F4ECDD] hover:bg-[#E8DCC2] text-xs font-medium text-[#6E5428]"
-              >
-                {trimmed ? t('form.trimAgain') : t('form.trim')}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowTrim(true)}
+              title={t('form.trimTitle')}
+              className="h-8 px-3 rounded-lg bg-[#F4ECDD] hover:bg-[#E8DCC2] text-xs font-medium text-[#6E5428]"
+            >
+              {trimmed ? t('form.trimAgain') : t('form.trim')}
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -142,6 +139,15 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
               className="h-8 px-3 rounded-lg bg-white border border-[#E2D8C4] hover:bg-[#F4F1EA] text-xs font-medium text-[#5E5A4E]"
             >
               {t('common.download')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                saveCaptureAsPdf(currentImage, title.trim() || undefined).catch(() => alert(t('common.pdfFailed')));
+              }}
+              className="h-8 px-3 rounded-lg bg-white border border-[#E2D8C4] hover:bg-[#F4F1EA] text-xs font-medium text-[#5E5A4E]"
+            >
+              {t('common.savePdf')}
             </button>
           </div>
         </div>
@@ -229,7 +235,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
 
       {showTrim && (
         <TrimImageModal
-          imageData={imageData}
+          imageData={currentImage}
           onCancel={() => setShowTrim(false)}
           onApply={(cropped) => {
             setTrimmed(cropped);

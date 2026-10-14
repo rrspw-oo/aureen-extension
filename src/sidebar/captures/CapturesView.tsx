@@ -148,7 +148,8 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
           tags: fields.tags,
           note: fields.note.trim(),
           linkedIds: fields.linkedIds.length > 0 ? fields.linkedIds : undefined,
-          price: fields.price
+          price: fields.price,
+          ...(fields.imageData !== sheet.capture.imageData ? { imageData: fields.imageData } : {})
         });
       }
       closeSheet();
@@ -176,7 +177,6 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
       isEdit={sheet.kind === 'edit'}
       selfId={sheet.kind === 'new' ? sheet.id : sheet.capture.id}
       imageData={sheet.kind === 'new' ? sheet.imageData : sheet.capture.imageData}
-      fullPage={sheet.kind === 'new' && sheet.fullPage}
       pageUrl={sheet.kind === 'new' ? sheet.url : sheet.capture.url}
       ocrText={sheet.kind === 'edit' ? sheet.capture.ocrText : undefined}
       initial={
