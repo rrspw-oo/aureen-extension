@@ -326,7 +326,7 @@ const FabButton: React.FC = () => {
           width: `${FAB_SIZE}px`,
           height: `${FAB_SIZE}px`,
           borderRadius: '50%',
-          background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%), linear-gradient(135deg, #FADDBD 0%, #E2C9A4 45%, #C9A57A 100%)',
+          background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45), rgba(255,255,255,0) 55%), linear-gradient(135deg, #FFD98A 0%, #F0B94A 50%, #D99A2B 100%)',
           border: 'none',
           color: '#FFFFFF',
           cursor: dragging ? 'grabbing' : 'grab',
@@ -335,8 +335,8 @@ const FabButton: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: expanded
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.6), 0 6px 24px rgba(201,165,122,0.5), 0 2px 8px rgba(166,131,94,0.2)'
-            : 'inset 0 0 0 1px rgba(255,255,255,0.6), 0 4px 20px rgba(201,165,122,0.42), 0 1px 6px rgba(166,131,94,0.18)',
+            ? 'inset 0 0 0 1px rgba(255,255,255,0.45), 0 6px 22px rgba(217,154,43,0.55), 0 2px 6px rgba(217,154,43,0.35)'
+            : 'inset 0 0 0 1px rgba(255,255,255,0.45), 0 4px 18px rgba(217,154,43,0.45), 0 1px 5px rgba(217,154,43,0.3)',
           transition: 'box-shadow 0.18s ease',
           flexShrink: 0,
         }}
@@ -349,7 +349,7 @@ const FabButton: React.FC = () => {
           fill="none"
           style={{
             transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-            filter: 'drop-shadow(0 1px 1.5px rgba(166,131,94,0.55))',
+            filter: 'drop-shadow(0 1px 1px rgba(150,95,20,0.45))',
             transform: expanded ? 'rotate(135deg) scale(0.9)' : 'rotate(0deg) scale(1)',
           }}
         >
