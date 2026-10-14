@@ -328,6 +328,7 @@ const FabButton: React.FC = () => {
           borderRadius: '50%',
           background: 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.38), rgba(255,255,255,0) 58%), linear-gradient(135deg, #D8BC85 0%, #B8975B 100%)',
           border: 'none',
+          color: '#FFFFFF',
           cursor: dragging ? 'grabbing' : 'grab',
           touchAction: 'none',
           display: 'flex',
