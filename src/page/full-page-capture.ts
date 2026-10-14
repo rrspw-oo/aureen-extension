@@ -121,6 +121,11 @@ function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// chrome.tabs.captureVisibleTab allows ~2 calls per second, so the loop only
+// needs to wait for that quota plus a short scroll-settle, not a fixed 600ms.
+const MIN_CAPTURE_INTERVAL_MS = 520;
+const SCROLL_SETTLE_MS = 120;
+
 async function captureAndStore(sessionId: string): Promise<void> {
   const response = await chrome.runtime.sendMessage({
     action: 'capture-screenshot',
@@ -149,7 +154,7 @@ export async function startFullPageCapture(): Promise<void> {
 
     window.scrollTo(0, 0);
     await waitFrame();
-    await wait(600);
+    await wait(250);
 
     const pageHeight     = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
     const totalHeight    = choice.endY === null ? pageHeight : Math.min(choice.endY, pageHeight);
@@ -159,13 +164,17 @@ export async function startFullPageCapture(): Promise<void> {
 
     const segmentRefs: SegmentRef[] = [];
     let y = 0;
+    let lastCaptureAt = 0;
 
     while (y < totalHeight) {
       window.scrollTo(0, Math.max(0, Math.min(y, totalHeight - viewportHeight)));
       await waitFrame();
-      await wait(600);
+      await wait(SCROLL_SETTLE_MS);
+      const sinceLast = Date.now() - lastCaptureAt;
+      if (sinceLast < MIN_CAPTURE_INTERVAL_MS) await wait(MIN_CAPTURE_INTERVAL_MS - sinceLast);
       const actualScrollY = window.scrollY;
       await captureAndStore(sessionId);
+      lastCaptureAt = Date.now();
       segmentRefs.push({ scrollY: actualScrollY });
       if (actualScrollY === segmentRefs[segmentRefs.length - 2]?.scrollY) {
         break;
