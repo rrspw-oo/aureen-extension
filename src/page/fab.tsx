@@ -110,7 +110,7 @@ const ITEMS = [
   },
 ];
 
-const SUN_RAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
+const SUN_RAYS = [0, 45, 90, 135, 180, 225, 270, 315];
 
 const FAB_SIZE = 52;
 const DRAG_THRESHOLD = 4;
@@ -326,7 +326,7 @@ const FabButton: React.FC = () => {
           width: `${FAB_SIZE}px`,
           height: `${FAB_SIZE}px`,
           borderRadius: '50%',
-          background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.45), rgba(255,255,255,0) 55%), linear-gradient(135deg, #FFD98A 0%, #F0B94A 50%, #D99A2B 100%)',
+          background: 'linear-gradient(180deg, #FFCB5C 0%, #F2A93B 100%)',
           border: 'none',
           color: '#FFFFFF',
           cursor: dragging ? 'grabbing' : 'grab',
@@ -335,8 +335,8 @@ const FabButton: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: expanded
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.45), 0 6px 22px rgba(217,154,43,0.55), 0 2px 6px rgba(217,154,43,0.35)'
-            : 'inset 0 0 0 1px rgba(255,255,255,0.45), 0 4px 18px rgba(217,154,43,0.45), 0 1px 5px rgba(217,154,43,0.3)',
+            ? 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(180,110,20,0.18), 0 0 0 0.5px rgba(180,110,20,0.35), 0 2px 4px rgba(150,95,20,0.18), 0 14px 30px -8px rgba(242,169,59,0.8)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(180,110,20,0.18), 0 0 0 0.5px rgba(180,110,20,0.35), 0 1px 2px rgba(150,95,20,0.18), 0 10px 24px -8px rgba(242,169,59,0.7)',
           transition: 'box-shadow 0.18s ease',
           flexShrink: 0,
         }}
@@ -349,20 +349,19 @@ const FabButton: React.FC = () => {
           fill="none"
           style={{
             transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-            filter: 'drop-shadow(0 1px 1px rgba(150,95,20,0.45))',
             transform: expanded ? 'rotate(135deg) scale(0.9)' : 'rotate(0deg) scale(1)',
           }}
         >
-          <circle cx="14" cy="14" r="5" fill="white" />
+          <circle cx="14" cy="14" r="4.6" fill="#FFFFFF" />
           {SUN_RAYS.map((deg) => (
             <line
               key={deg}
-              x1={14 + 7 * Math.cos((deg * Math.PI) / 180)}
-              y1={14 + 7 * Math.sin((deg * Math.PI) / 180)}
-              x2={14 + 12 * Math.cos((deg * Math.PI) / 180)}
-              y2={14 + 12 * Math.sin((deg * Math.PI) / 180)}
+              x1={14 + 7.6 * Math.cos((deg * Math.PI) / 180)}
+              y1={14 + 7.6 * Math.sin((deg * Math.PI) / 180)}
+              x2={14 + 10.8 * Math.cos((deg * Math.PI) / 180)}
+              y2={14 + 10.8 * Math.sin((deg * Math.PI) / 180)}
               stroke="#FFFFFF"
-              strokeWidth="1.5"
+              strokeWidth="1.9"
               strokeLinecap="round"
             />
           ))}
