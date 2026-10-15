@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SidebarApp } from '@/sidebar/shell';
 
 interface HighlightPayload {
   text: string;
   url: string;
   pageTitle: string;
+  color?: string | null;
+  focusNote?: boolean;
 }
 
 const ACTIONS = [
@@ -22,6 +25,7 @@ const ACTIONS = [
 export function DesktopApp() {
   const bus = useMemo(() => new EventTarget(), []);
   const [error, setError] = useState<string | null>(null);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const send = (detail: Record<string, unknown>): void => {
@@ -35,12 +39,34 @@ export function DesktopApp() {
       listen<string>('capture-ready', (e) => capture(e.payload, false)),
       listen<string>('fullpage-ready', (e) => capture(e.payload, true)),
       listen<HighlightPayload>('highlight-ready', (e) =>
-        send({ mode: 'highlight', text: e.payload.text, url: e.payload.url, pageTitle: e.payload.pageTitle })
+        send({
+          mode: 'highlight',
+          text: e.payload.text,
+          url: e.payload.url,
+          pageTitle: e.payload.pageTitle,
+          ...(e.payload.color ? { color: e.payload.color } : {}),
+          focusNote: Boolean(e.payload.focusNote)
+        })
       ),
+      listen<boolean>('paused-changed', (e) => setPaused(e.payload)),
       listen<string>('capture-error', (e) => setError(e.payload))
     ];
+    void invoke<boolean>('is_paused').then(setPaused);
     return () => subscriptions.forEach((p) => void p.then((off) => off()));
   }, [bus]);
+
+  useEffect(() => {
+    // Drag the panel by its header; once moved it stays put (see pin_panel in Rust).
+    const onMouseDown = (event: MouseEvent): void => {
+      const target = event.target as HTMLElement | null;
+      if (event.button !== 0 || !target?.closest('header')) return;
+      if (target.closest('button, a, input, select, textarea, [role="menu"]')) return;
+      event.preventDefault();
+      void getCurrentWindow().startDragging().then(() => invoke('pin_panel'));
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, []);
 
   useEffect(() => {
     // The shared captures view asks its host page to start a region capture.
@@ -65,6 +91,30 @@ export function DesktopApp() {
 
   const toolbar = (
     <div className="px-4 pt-3 flex-shrink-0">
+      <div className="mb-2 flex items-center justify-between">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!paused}
+          onClick={() => void invoke('set_paused', { paused: !paused })}
+          title={paused ? '重新啟用快捷鍵與選字工具列' : '暫停快捷鍵與選字工具列,App 仍留在選單列'}
+          className="flex items-center gap-2 text-xs font-medium text-[#5E5A4E]"
+        >
+          <span className={`relative inline-block w-8 h-[18px] rounded-full transition-colors ${paused ? 'bg-[#D9D3C6]' : 'bg-[#C9A86C]'}`}>
+            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${paused ? 'left-[2px]' : 'left-[16px]'}`} />
+          </span>
+          {paused ? 'Aureen 已暫停' : 'Aureen 啟用中'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('要結束 Aureen 嗎?選單列圖示會消失,快捷鍵也會停止。')) void invoke('quit_app');
+          }}
+          className="h-7 px-2.5 rounded-md text-xs font-medium text-[#B5533F] hover:bg-[#FBEDE8]"
+        >
+          結束 Aureen
+        </button>
+      </div>
       <div className="grid grid-cols-3 gap-1.5">
         {ACTIONS.map((action) => (
           <button

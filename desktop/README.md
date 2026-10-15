@@ -24,6 +24,12 @@ First launch: macOS asks for **Screen Recording** permission for the terminal (d
 
 All three are also in the tray menu (right-click) and as buttons at the top of the panel.
 
+**Selection toolbar.** Drag-select (or double-click) text in any app and the extension's toolbar appears next to the pointer: *Highlight* with the default color, the four color dots (which also set the default), and the note button. Picking one opens the highlight form in the panel, like the extension's sidebar. Text is read through the Accessibility API; Firefox and pages that hide their text fall back to ⌘C.
+
+**Panel.** Drag the header to move the panel anywhere; once moved it stays there and no longer closes when you click elsewhere. Tray menu → *面板回到圖示下方* docks it again.
+
+**Pause / quit.** The switch at the top of the panel (or tray menu → *暫停 Aureen*) turns off the shortcuts and the selection toolbar while keeping Aureen in the menu bar (the icon shows Ⅱ). *結束 Aureen* quits the app.
+
 ## Permissions
 
 - **Screen Recording** – region and full-page capture.

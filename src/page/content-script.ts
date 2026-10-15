@@ -5,6 +5,7 @@
 
 import { injectHighlightStyles, isValidSelection } from '@/lib/dom';
 import { initContentApp } from '@/page/content-app';
+import { TOOLBAR_COLORS } from '@/page/toolbar-colors';
 import { toggleSidebarShadow, mountSidebarWithShadow, isSidebarVisible, hideSidebarShadow } from '@/sidebar/shell';
 import { highlighter } from '@/page/highlighter';
 import { startScreenshotCapture } from '@/page/region-capture';
@@ -13,12 +14,6 @@ import { storageService } from '@/lib/highlight-store';
 import { t } from '@/i18n/config';
 import type { Highlight, HighlightColor } from '@/types/highlight';
 
-const TOOLBAR_COLORS: { color: HighlightColor; swatch: string; label: string }[] = [
-  { color: 'yellow', swatch: '#F0DDAE', label: 'toolbar.champagne' },
-  { color: 'mint', swatch: '#CDEBD8', label: 'toolbar.mint' },
-  { color: 'coral', swatch: '#F6D0CC', label: 'toolbar.rose' },
-  { color: 'sky', swatch: '#CFE0F6', label: 'toolbar.sky' }
-];
 
 declare global {
   interface Window {

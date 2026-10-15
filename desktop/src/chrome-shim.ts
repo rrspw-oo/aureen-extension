@@ -53,9 +53,26 @@ async function persist(area: Area, key: string, value: unknown, remove: boolean)
   });
 }
 
+function notify(changes: Changes, area: Area): void {
+  for (const listener of [...listeners]) listener(changes, area);
+}
+
+// The panel and the selection toolbar are separate windows sharing one IndexedDB;
+// this keeps their caches and change listeners in step, like chrome.storage does.
+const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('aureen-storage');
+channel?.addEventListener('message', (event: MessageEvent<{ area: Area; changes: Changes }>) => {
+  const { area, changes } = event.data;
+  for (const [key, change] of Object.entries(changes)) {
+    if ('newValue' in change) cache[area].set(key, change.newValue);
+    else cache[area].delete(key);
+  }
+  notify(changes, area);
+});
+
 function emit(changes: Changes, area: Area): void {
   if (Object.keys(changes).length === 0) return;
-  for (const listener of [...listeners]) listener(changes, area);
+  notify(changes, area);
+  channel?.postMessage({ area, changes });
 }
 
 function makeArea(area: Area) {

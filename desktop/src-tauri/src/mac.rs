@@ -88,7 +88,7 @@ const CHROMIUM_BROWSERS: &[&str] = &[
 ];
 
 /// URL and title of the active tab when `app` is a scriptable browser.
-fn browser_tab(app: &str) -> Option<(String, String)> {
+pub fn browser_tab(app: &str) -> Option<(String, String)> {
     let script = if app == "Safari" || app == "Safari Technology Preview" {
         format!(
             "tell application {} to return (URL of current tab of front window) & linefeed & (name of current tab of front window)",
@@ -108,12 +108,65 @@ fn browser_tab(app: &str) -> Option<(String, String)> {
         .then(|| (url.to_string(), title.to_string()))
 }
 
-fn front_window_title() -> Option<String> {
-    osascript(
-        r#"tell application "System Events" to tell (first application process whose frontmost is true) to get name of front window"#,
-    )
+fn window_title_of(app: &str) -> Option<String> {
+    osascript(&format!(
+        "tell application \"System Events\" to tell process {} to get name of front window",
+        applescript_string(app)
+    ))
     .ok()
     .filter(|s| !s.is_empty())
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub const BROWSERS_WITHOUT_AX_TEXT: &[&str] =
+    &["Firefox", "Firefox Developer Edition", "Zen Browser"];
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+/// Whether `app` is a browser (where ⌘C is a safe fallback for reading the selection).
+pub fn is_browser(app: &str) -> bool {
+    app.starts_with("Safari")
+        || CHROMIUM_BROWSERS.contains(&app)
+        || BROWSERS_WITHOUT_AX_TEXT.contains(&app)
+}
+
+/// Where a selection in `app` came from: the browser tab, or the app and its window title.
+pub fn source_of(app: &str) -> (String, String) {
+    browser_tab(app).unwrap_or_else(|| {
+        let title = window_title_of(app).unwrap_or_else(|| app.to_string());
+        (
+            format!("aureen-app://{}", app.replace(' ', "%20")),
+            if title == app {
+                app.to_string()
+            } else {
+                format!("{app} · {title}")
+            },
+        )
+    })
+}
+
+/// Reads the frontmost app's selection by sending ⌘C, then puts the user's text clipboard back.
+pub fn copy_selection_text() -> Result<Option<String>, String> {
+    let saved = pb_read();
+    let marker = format!("__aureen_selection_{}__", stamp());
+    pb_write(&marker);
+
+    let sent = osascript(r#"tell application "System Events" to keystroke "c" using command down"#);
+    let mut text = marker.clone();
+    if sent.is_ok() {
+        for _ in 0..12 {
+            sleep(Duration::from_millis(80));
+            text = pb_read();
+            if text != marker {
+                break;
+            }
+        }
+    }
+    // Restore the previous text clipboard (when it held text).
+    if !saved.is_empty() {
+        pb_write(&saved);
+    }
+    sent?;
+    Ok((text != marker && !text.trim().is_empty()).then(|| text.trim().to_string()))
 }
 
 pub struct Selection {
@@ -122,39 +175,14 @@ pub struct Selection {
     pub page_title: String,
 }
 
-/// Copies the current selection of the frontmost app (⌘C), then puts the user's clipboard back.
+/// Copies the current selection of the frontmost app (⌘C) for the ⌘⇧1 shortcut.
 pub fn grab_selection() -> Result<Selection, String> {
     let app = frontmost_app()?;
-    let saved = pb_read();
-    let marker = format!("__aureen_selection_{}__", stamp());
-    pb_write(&marker);
-
-    osascript(r#"tell application "System Events" to keystroke "c" using command down"#)?;
-    let mut text = marker.clone();
-    for _ in 0..12 {
-        sleep(Duration::from_millis(80));
-        text = pb_read();
-        if text != marker {
-            break;
-        }
-    }
-    // Restore the previous text clipboard (when it held text).
-    if !saved.is_empty() {
-        pb_write(&saved);
-    }
-    if text == marker || text.trim().is_empty() {
-        return Err("沒有讀到選取的文字。請先選取一段文字,再按 ⌘⇧1。".into());
-    }
-
-    let (url, page_title) = browser_tab(&app).unwrap_or_else(|| {
-        let title = front_window_title().unwrap_or_else(|| app.clone());
-        (
-            format!("aureen-app://{}", app.replace(' ', "%20")),
-            format!("{app} · {title}"),
-        )
-    });
+    let text = copy_selection_text()?
+        .ok_or_else(|| "沒有讀到選取的文字。請先選取一段文字,再按 ⌘⇧1。".to_string())?;
+    let (url, page_title) = source_of(&app);
     Ok(Selection {
-        text: text.trim().to_string(),
+        text,
         url,
         page_title,
     })

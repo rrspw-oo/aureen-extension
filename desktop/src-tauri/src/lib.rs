@@ -1,20 +1,26 @@
 mod mac;
+#[cfg(target_os = "macos")]
+mod selection_watch;
 mod stitch;
 
 use base64::Engine;
 use serde::Serialize;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, WindowEvent,
+    AppHandle, Emitter, LogicalPosition, Manager, PhysicalPosition, WindowEvent, Wry,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const PANEL_LABEL: &str = "panel";
+const TOOLBAR_LABEL: &str = "toolbar";
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const TOOLBAR_SIZE: (f64, f64) = (300.0, 56.0);
 
 #[cfg(target_os = "macos")]
 #[link(name = "CoreGraphics", kind = "framework")]
@@ -149,6 +155,8 @@ struct HighlightPayload {
     text: String,
     url: String,
     page_title: String,
+    color: Option<String>,
+    focus_note: bool,
 }
 
 /// ⌘⇧1: saves the text selected in any app as a highlight (the desktop "highlight" action).
@@ -164,12 +172,152 @@ fn start_selection_flow(app: AppHandle) {
                         text: sel.text,
                         url: sel.url,
                         page_title: sel.page_title,
+                        color: None,
+                        focus_note: false,
                     },
                 );
             }
             Err(message) => report_error(&app, message),
         }
     });
+}
+
+// ---- Selection toolbar (the extension's floating highlight toolbar, for any app) ----
+
+/// Text and source app of the selection the toolbar is showing for.
+static PENDING_SELECTION: Mutex<Option<(String, String)>> = Mutex::new(None);
+/// Toolbar frame in screen points while it is visible.
+static TOOLBAR_RECT: Mutex<Option<(f64, f64, f64, f64)>> = Mutex::new(None);
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn show_toolbar(app: &AppHandle, text: String, source_app: String, x: f64, y: f64) {
+    let Some(toolbar) = app.get_webview_window(TOOLBAR_LABEL) else {
+        return;
+    };
+    let (w, h) = TOOLBAR_SIZE;
+    let left = (x - w / 2.0).max(4.0);
+    // Above the release point, or below it when that would leave the screen.
+    let top = if y - h - 14.0 >= 28.0 {
+        y - h - 14.0
+    } else {
+        y + 18.0
+    };
+    *PENDING_SELECTION.lock().unwrap_or_else(|e| e.into_inner()) = Some((text, source_app));
+    *TOOLBAR_RECT.lock().unwrap_or_else(|e| e.into_inner()) = Some((left, top, w, h));
+    let _ = toolbar.set_position(LogicalPosition::new(left, top));
+    let _ = toolbar.show();
+    let _ = app.emit_to(TOOLBAR_LABEL, "toolbar-show", ());
+}
+
+fn hide_toolbar(app: &AppHandle) {
+    *TOOLBAR_RECT.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    if let Some(toolbar) = app.get_webview_window(TOOLBAR_LABEL) {
+        let _ = toolbar.hide();
+    }
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+/// A press outside the toolbar dismisses it, like clicking elsewhere on a web page.
+fn dismiss_toolbar_if_outside(app: &AppHandle, x: f64, y: f64) {
+    let rect = *TOOLBAR_RECT.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some((left, top, w, h)) = rect {
+        if x < left || x > left + w || y < top || y > top + h {
+            hide_toolbar(app);
+        }
+    }
+}
+
+/// Toolbar button: open the highlight form for the pending selection (color, or note first).
+#[tauri::command]
+fn toolbar_pick(app: AppHandle, color: String, focus_note: bool) {
+    let pending = PENDING_SELECTION
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    hide_toolbar(&app);
+    let Some((text, source_app)) = pending else {
+        return;
+    };
+    std::thread::spawn(move || {
+        let (url, page_title) = mac::source_of(&source_app);
+        show_panel(&app);
+        let _ = app.emit(
+            "highlight-ready",
+            HighlightPayload {
+                text,
+                url,
+                page_title,
+                color: Some(color),
+                focus_note,
+            },
+        );
+    });
+}
+
+// ---- Pause / resume ----
+
+static PAUSED: AtomicBool = AtomicBool::new(false);
+
+struct PauseMenuItem(MenuItem<Wry>);
+
+fn set_paused_state(app: &AppHandle, paused: bool) {
+    PAUSED.store(paused, Ordering::SeqCst);
+    #[cfg(target_os = "macos")]
+    selection_watch::ENABLED.store(!paused, Ordering::SeqCst);
+    if paused {
+        let _ = app.global_shortcut().unregister_all();
+        hide_toolbar(app);
+    } else {
+        register_shortcuts(app);
+    }
+    if let Some(item) = app.try_state::<PauseMenuItem>() {
+        let _ = item.0.set_text(if paused {
+            "啟用 Aureen"
+        } else {
+            "暫停 Aureen"
+        });
+    }
+    if let Some(tray) = app.tray_by_id("aureen") {
+        let _ = tray.set_tooltip(Some(if paused {
+            "Aureen(已暫停)"
+        } else {
+            "Aureen"
+        }));
+        let _ = tray.set_title(if paused { Some("Ⅱ") } else { None });
+    }
+    let _ = app.emit("paused-changed", paused);
+}
+
+#[tauri::command]
+fn set_paused(app: AppHandle, paused: bool) {
+    set_paused_state(&app, paused);
+}
+
+#[tauri::command]
+fn is_paused() -> bool {
+    PAUSED.load(Ordering::SeqCst)
+}
+
+#[tauri::command]
+fn quit_app(app: AppHandle) {
+    app.exit(0);
+}
+
+// ---- Panel position ----
+
+/// Set once the user drags the panel away: it then stays where they put it and no longer
+/// closes when it loses focus, until "Dock panel under the icon" is chosen.
+static PANEL_PINNED: AtomicBool = AtomicBool::new(false);
+
+#[tauri::command]
+fn pin_panel() {
+    PANEL_PINNED.store(true, Ordering::SeqCst);
+}
+
+#[tauri::command]
+fn dock_panel(app: AppHandle) {
+    PANEL_PINNED.store(false, Ordering::SeqCst);
+    hide_panel_window(&app);
 }
 
 static FULL_PAGE_RUNNING: AtomicBool = AtomicBool::new(false);
@@ -324,6 +472,18 @@ fn full_page_shortcut() -> Shortcut {
     Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Digit9)
 }
 
+fn register_shortcuts<M: Manager<Wry>>(manager: &M) {
+    for shortcut in [
+        selection_shortcut(),
+        region_shortcut(),
+        full_page_shortcut(),
+    ] {
+        if let Err(e) = manager.global_shortcut().register(shortcut) {
+            eprintln!("Aureen: could not register shortcut {shortcut:?}: {e}");
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -346,6 +506,12 @@ pub fn run() {
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
+            toolbar_pick,
+            set_paused,
+            is_paused,
+            quit_app,
+            pin_panel,
+            dock_panel,
             start_capture,
             start_selection,
             start_full_page,
@@ -358,14 +524,22 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            for shortcut in [
-                selection_shortcut(),
-                region_shortcut(),
-                full_page_shortcut(),
-            ] {
-                if let Err(e) = app.global_shortcut().register(shortcut) {
-                    eprintln!("Aureen: could not register shortcut {shortcut:?}: {e}");
-                }
+            register_shortcuts(app);
+
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle().clone();
+                selection_watch::spawn(move |event| match event {
+                    selection_watch::SelectionEvent::Selected {
+                        text,
+                        app: source,
+                        x,
+                        y,
+                    } => show_toolbar(&handle, text, source, x, y),
+                    selection_watch::SelectionEvent::MouseDown { x, y } => {
+                        dismiss_toolbar_if_outside(&handle, x, y)
+                    }
+                });
             }
 
             let selection_item =
@@ -375,6 +549,10 @@ pub fn run() {
             let full_page_item =
                 MenuItem::with_id(app, "full_page", "整頁截圖  ⌘⇧9", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
+            let pause_item = MenuItem::with_id(app, "pause", "暫停 Aureen", true, None::<&str>)?;
+            let dock_item =
+                MenuItem::with_id(app, "dock_panel", "面板回到圖示下方", true, None::<&str>)?;
+            app.manage(PauseMenuItem(pause_item.clone()));
             let quit_item = MenuItem::with_id(app, "quit", "結束 Aureen", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
@@ -383,6 +561,8 @@ pub fn run() {
                     &capture_item,
                     &full_page_item,
                     &separator,
+                    &pause_item,
+                    &dock_item,
                     &quit_item,
                 ],
             )?;
@@ -397,6 +577,11 @@ pub fn run() {
                     "selection" => start_selection_flow(app.clone()),
                     "capture" => start_capture_flow(app.clone()),
                     "full_page" => start_full_page_flow(app.clone()),
+                    "pause" => set_paused_state(app, !PAUSED.load(Ordering::SeqCst)),
+                    "dock_panel" => {
+                        PANEL_PINNED.store(false, Ordering::SeqCst);
+                        hide_panel_window(app);
+                    }
                     "quit" => app.exit(0),
                     _ => {}
                 })
@@ -415,7 +600,9 @@ pub fn run() {
                             .unwrap_or(1.0);
                         let pos = rect.position.to_physical::<f64>(scale);
                         let size = rect.size.to_physical::<f64>(scale);
-                        place_panel_under(app, pos, (size.width, size.height));
+                        if !PANEL_PINNED.load(Ordering::SeqCst) {
+                            place_panel_under(app, pos, (size.width, size.height));
+                        }
                         toggle_panel(app);
                     }
                 })
@@ -426,6 +613,9 @@ pub fn run() {
                 let handle = panel.clone();
                 panel.on_window_event(move |event| {
                     if let WindowEvent::Focused(false) = event {
+                        if PANEL_PINNED.load(Ordering::SeqCst) {
+                            return;
+                        }
                         let _ = handle.hide();
                     }
                 });
