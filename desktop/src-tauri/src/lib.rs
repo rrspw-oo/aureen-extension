@@ -11,6 +11,25 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 
 const PANEL_LABEL: &str = "panel";
 
+#[cfg(target_os = "macos")]
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGPreflightScreenCaptureAccess() -> bool;
+    fn CGRequestScreenCaptureAccess() -> bool;
+}
+
+/// True when this process (in dev: the terminal app that launched it) may record the screen.
+/// When it may not, asks macOS to show the permission prompt.
+#[cfg(target_os = "macos")]
+fn ensure_screen_access() -> bool {
+    unsafe { CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn ensure_screen_access() -> bool {
+    true
+}
+
 /// Runs macOS's built-in region picker (`screencapture -i`) and returns the PNG as a data URL.
 /// `Ok(None)` means the user pressed Esc.
 fn capture_region() -> Result<Option<String>, String> {
@@ -27,12 +46,9 @@ fn capture_region() -> Result<Option<String>, String> {
         .map_err(|e| format!("screencapture failed to start: {e}"))?;
 
     if !path.exists() {
-        // Esc leaves no file; a non-zero exit without a file usually means missing permission.
-        return if status.success() {
-            Ok(None)
-        } else {
-            Err("screencapture exited without producing an image (check Screen Recording permission)".into())
-        };
+        // Esc (or a click without dragging) leaves no file; that is a cancel, not an error.
+        let _ = status;
+        return Ok(None);
     }
 
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
@@ -78,6 +94,14 @@ fn start_capture_flow(app: AppHandle) {
     std::thread::spawn(move || {
         if let Some(panel) = app.get_webview_window(PANEL_LABEL) {
             let _ = panel.hide();
+        }
+        if !ensure_screen_access() {
+            show_panel(&app);
+            let _ = app.emit(
+                "capture-error",
+                "需要「螢幕錄製」權限:系統設定 → 隱私權與安全性 → 螢幕與系統錄音,開啟後完全結束並重開 App(開發時是你用的終端機)。",
+            );
+            return;
         }
         match capture_region() {
             Ok(Some(data_url)) => {
