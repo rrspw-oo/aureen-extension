@@ -73,7 +73,29 @@ export interface HandbookOptions {
   // Selected tag names to export. Empty or undefined exports everything.
   // Semantics are OR: an item is included if it carries ANY selected tag.
   tags?: string[];
+  // Explicit item ids to export, in addition to tag filtering; when set, only these are exported.
+  ids?: string[];
+  // User-chosen name: used for the cover, the running page header and the file name.
   title?: string;
+}
+
+// Label shown in the running header of every page; the user's title when given.
+let headerLabel = 'Aureen';
+
+function pickItems<T extends { id: string; tags: string[] }>(all: T[], options: Pick<HandbookOptions, 'tags' | 'ids'>): T[] {
+  if (options.ids && options.ids.length > 0) {
+    const wanted = new Set(options.ids);
+    return all.filter((item) => wanted.has(item.id));
+  }
+  return all.filter((item) => matchesSelectedTags(item.tags, options.tags ?? []));
+}
+
+function fileBaseName(title: string | undefined, fallback: string): string {
+  const cleaned = (title ?? '')
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '')
+    .trim()
+    .slice(0, 80);
+  return cleaned || fallback;
 }
 
 /** True when the item carries at least one of the selected tags (OR match). */
@@ -138,7 +160,7 @@ function pageShell(inner: string, pageNumber: number): string {
       <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="width:9px;height:9px;border-radius:50%;background:${ACCENT};display:inline-block;"></span>
-          <span style="font-size:14px;font-weight:600;letter-spacing:0.02em;">Aureen</span>
+          <span style="font-size:14px;font-weight:600;letter-spacing:0.02em;">${escapeHtml(headerLabel)}</span>
         </div>
         <span style="font-size:13px;color:${MUTED};">${String(pageNumber).padStart(2, '0')}</span>
       </div>
@@ -256,7 +278,7 @@ function addTextPage(
   doc.setTextColor(31, 31, 46);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('Aureen', left + 18, y);
+  doc.text(headerLabel, left + 18, y);
   doc.setTextColor(148, 146, 168);
   doc.setFontSize(13);
   doc.setFont('helvetica', 'normal');
@@ -487,7 +509,8 @@ function tagScopeSlug(tags?: string[]): string {
   return tags.join('-');
 }
 
-export async function getHandbookCount(tags?: string[]): Promise<number> {
+export async function getHandbookCount(tags?: string[], ids?: string[]): Promise<number> {
+  if (ids && ids.length > 0) return pickItems(await imageCaptureStorage.getAllCaptures(), { ids }).length;
   const captures = await imageCaptureStorage.getAllCaptures();
   const selected = tags ?? [];
   return captures.filter((c) => matchesSelectedTags(c.tags, selected)).length;
@@ -506,7 +529,7 @@ export async function exportHandbook(options: HandbookOptions): Promise<number> 
   ]);
 
   const selected = options.tags ?? [];
-  const captures = allCaptures.filter((c) => matchesSelectedTags(c.tags, selected));
+  const captures = pickItems(allCaptures, options);
 
   if (captures.length === 0) {
     throw new Error(selected.length ? 'No captures found for the selected tags' : 'No captures to export');
@@ -519,6 +542,7 @@ export async function exportHandbook(options: HandbookOptions): Promise<number> 
   const scopeLabel = tagScopeLabel(selected);
   const title = options.title?.trim() || (scopeLabel ? `${L.handbookTitle} ${scopeLabel}` : L.handbookTitle);
 
+  headerLabel = options.title?.trim() || 'Aureen';
   let blob: Blob;
   if (hasRenderableImages(items, options.includeImage)) {
     await downscaleItems(items);
@@ -527,7 +551,7 @@ export async function exportHandbook(options: HandbookOptions): Promise<number> 
     blob = buildTextHandbookBlob(items, title, L.captureUnit(items.length));
   }
   const slug = tagScopeSlug(selected);
-  const baseName = slug ? `aureen-handbook-${slug}` : 'aureen-handbook';
+  const baseName = fileBaseName(options.title, slug ? `aureen-handbook-${slug}` : 'aureen-handbook');
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');
   return items.length;
 }
@@ -539,7 +563,7 @@ export async function exportHighlightHandbook(options: HandbookOptions): Promise
   ]);
 
   const selected = options.tags ?? [];
-  const highlights = allHighlights.filter((h) => matchesSelectedTags(h.tags, selected));
+  const highlights = pickItems(allHighlights, options);
 
   if (highlights.length === 0) {
     throw new Error(selected.length ? 'No highlights found for the selected tags' : 'No highlights to export');
@@ -553,11 +577,12 @@ export async function exportHighlightHandbook(options: HandbookOptions): Promise
   const title = options.title?.trim() || (scopeLabel ? `${L.highlightTitle} ${scopeLabel}` : L.highlightTitle);
 
   const highlightOptions: HandbookOptions = { ...options, includeImage: false };
+  headerLabel = options.title?.trim() || 'Aureen';
   const blob = hasRenderableImages(items, highlightOptions.includeImage)
     ? await buildHandbookBlob(items, tagColors, highlightOptions, title, L.highlightUnit(items.length))
     : buildTextHandbookBlob(items, title, L.highlightUnit(items.length));
   const slug = tagScopeSlug(selected);
-  const baseName = slug ? `aureen-highlights-${slug}` : 'aureen-highlights';
+  const baseName = fileBaseName(options.title, slug ? `aureen-highlights-${slug}` : 'aureen-highlights');
   downloadFile(blob, generateFilenameWithDate(baseName, 'pdf'), 'application/pdf');
   return items.length;
 }

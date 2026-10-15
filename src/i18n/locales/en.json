@@ -189,7 +189,13 @@
     "includeImageHint": "When off, pages show text instead",
     "exporting": "Exporting...",
     "exportPdf": "Export PDF",
-    "failed": "Export failed"
+    "failed": "Export failed",
+    "fileName": "PDF name",
+    "fileNamePlaceholder": "e.g. Desk lamp comparison",
+    "chooseItems": "Choose items to include",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "selectedCount": "{{selected}} of {{total}} selected"
   },
   "toolbar": {
     "aria": "Aureen highlight",

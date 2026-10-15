@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { CapturesView } from '@/sidebar/captures/CapturesView';
-import { ExportHandbookDialog } from '@/sidebar/ExportHandbookDialog';
 import { storageService } from '@/lib/highlight-store';
 import type { LanguageSetting } from '@/types/highlight';
 
@@ -17,7 +16,6 @@ export function DesktopApp() {
   const { t } = useTranslation();
   const [data, setData] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
-  const [exportOpen, setExportOpen] = useState(false);
   const [language, setLanguage] = useState<LanguageSetting>('auto');
 
   useEffect(() => {
@@ -27,6 +25,15 @@ export function DesktopApp() {
   const handleCapture = useCallback((imageData: string) => {
     setError(null);
     setData({ mode: 'capture', imageData, url: 'aureen://screenshot', timestamp: Date.now(), captureId: `capture_${Date.now()}` });
+  }, []);
+
+  // The shared captures view asks the host page to start a capture via postMessage.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent): void => {
+      if (event.data?.type === 'AUREEN_START_SCREENSHOT') void invoke('start_capture');
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   useEffect(() => {
@@ -59,13 +66,6 @@ export function DesktopApp() {
           </select>
           <button
             type="button"
-            onClick={() => setExportOpen(true)}
-            className="h-8 px-3 rounded-lg border border-[#E2D8C4] bg-white text-xs font-medium text-[#5E5A4E] hover:bg-[#F4F1EA]"
-          >
-            {t('shell.export')}
-          </button>
-          <button
-            type="button"
             onClick={() => void invoke('start_capture')}
             className="h-8 px-3 rounded-lg border border-[#D9B377] text-xs font-semibold text-[#4A3A1C] bg-gradient-to-b from-[#F6DFB2] to-[#D9B377]"
           >
@@ -80,7 +80,6 @@ export function DesktopApp() {
         <CapturesView initialData={data} />
       </div>
 
-      {exportOpen && <ExportHandbookDialog kind="capture" onClose={() => setExportOpen(false)} />}
     </div>
   );
 }

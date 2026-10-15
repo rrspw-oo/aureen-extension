@@ -179,7 +179,13 @@
     "includeImageHint": "關閉時改為顯示文字",
     "exporting": "匯出中...",
     "exportPdf": "匯出 PDF",
-    "failed": "匯出失敗"
+    "failed": "匯出失敗",
+    "fileName": "PDF 名稱",
+    "fileNamePlaceholder": "例如:檯燈比價",
+    "chooseItems": "選擇要合併的項目",
+    "selectAll": "全選",
+    "selectNone": "全不選",
+    "selectedCount": "已選 {{selected}} / {{total}}"
   },
   "toolbar": {
     "aria": "Aureen 劃重點",

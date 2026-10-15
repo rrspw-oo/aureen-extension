@@ -110,7 +110,7 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
 
           {/* Action buttons overlay */}
           {showActions && (
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center gap-1.5">
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-wrap items-center content-center justify-center gap-1.5 p-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
