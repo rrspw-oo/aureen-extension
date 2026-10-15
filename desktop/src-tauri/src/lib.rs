@@ -6,7 +6,7 @@ mod stitch;
 use base64::Engine;
 use serde::Serialize;
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU8, Ordering};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
@@ -21,6 +21,8 @@ const PANEL_LABEL: &str = "panel";
 const TOOLBAR_LABEL: &str = "toolbar";
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 const TOOLBAR_SIZE: (f64, f64) = (300.0, 56.0);
+const FULLBAR_LABEL: &str = "fullbar";
+const FULLBAR_SIZE: (f64, f64) = (640.0, 84.0);
 
 #[cfg(target_os = "macos")]
 #[link(name = "CoreGraphics", kind = "framework")]
@@ -89,9 +91,6 @@ fn place_panel_under(app: &AppHandle, tray_pos: PhysicalPosition<f64>, tray_size
 }
 
 fn show_panel(app: &AppHandle) {
-    // The app may have been hidden to hand focus back to the user's window.
-    #[cfg(target_os = "macos")]
-    let _ = app.show();
     if let Some(panel) = app.get_webview_window(PANEL_LABEL) {
         let _ = panel.show();
         let _ = panel.set_focus();
@@ -104,12 +103,29 @@ fn hide_panel_window(app: &AppHandle) {
     }
 }
 
-/// Hides Aureen so the window the user was working in is frontmost again,
-/// and waits for the shortcut's modifier keys to be released.
+/// The app the user was in before opening the panel (to hand focus back to it).
+static LAST_EXTERNAL_PID: AtomicI32 = AtomicI32::new(0);
+
+fn remember_frontmost_app() {
+    if let Some(pid) = mac::frontmost_pid() {
+        if pid != std::process::id() as i32 {
+            LAST_EXTERNAL_PID.store(pid, Ordering::SeqCst);
+        }
+    }
+}
+
+/// Makes the window the user was working in frontmost again (when the action started from
+/// the panel), and waits for the shortcut's modifier keys to be released.
 fn give_focus_back(app: &AppHandle) {
+    let panel_was_open = app
+        .get_webview_window(PANEL_LABEL)
+        .and_then(|p| p.is_visible().ok())
+        .unwrap_or(false);
     hide_panel_window(app);
-    #[cfg(target_os = "macos")]
-    let _ = app.hide();
+    let pid = LAST_EXTERNAL_PID.load(Ordering::SeqCst);
+    if panel_was_open && pid > 0 {
+        mac::activate_pid(pid);
+    }
     std::thread::sleep(std::time::Duration::from_millis(450));
 }
 
@@ -320,50 +336,150 @@ fn dock_panel(app: AppHandle) {
     hide_panel_window(&app);
 }
 
-static FULL_PAGE_RUNNING: AtomicBool = AtomicBool::new(false);
+// ---- Full-page capture (the extension's "Capture to here / Whole page / Cancel" bar) ----
+
+const PHASE_IDLE: u8 = 0;
+const PHASE_CHOOSING: u8 = 1;
+const PHASE_RUNNING: u8 = 2;
+
+static FULL_PAGE_PHASE: AtomicU8 = AtomicU8::new(PHASE_IDLE);
 static FULL_PAGE_STOP: AtomicBool = AtomicBool::new(false);
+static FULL_PAGE_CANCEL: AtomicBool = AtomicBool::new(false);
+static FULL_PAGE_TARGET: Mutex<Option<mac::Target>> = Mutex::new(None);
+
+#[derive(Serialize, Clone)]
+struct FullBarState {
+    phase: &'static str,
+    count: usize,
+}
 
 fn escape_shortcut() -> Shortcut {
     Shortcut::new(None, Code::Escape)
 }
 
-/// ⌘⇧9: scrolls the frontmost window and stitches a full-page capture.
-/// Esc (or ⌘⇧9 again) stops at the part currently on screen, like "capture to here".
-fn start_full_page_flow(app: AppHandle) {
-    if FULL_PAGE_RUNNING.swap(true, Ordering::SeqCst) {
-        FULL_PAGE_STOP.store(true, Ordering::SeqCst);
+fn show_fullbar(app: &AppHandle, rect: (i64, i64, i64, i64)) {
+    let Some(bar) = app.get_webview_window(FULLBAR_LABEL) else {
         return;
-    }
-    FULL_PAGE_STOP.store(false, Ordering::SeqCst);
+    };
+    let (x, y, w, _) = rect;
+    let (bw, bh) = FULLBAR_SIZE;
+    let left = (x as f64 + w as f64 / 2.0 - bw / 2.0).max(4.0);
+    // Above the window when there is room, otherwise over its top edge (frames are taken of
+    // the window alone, so the bar never shows up in them).
+    let top = if y as f64 - bh - 8.0 >= 28.0 {
+        y as f64 - bh - 8.0
+    } else {
+        y as f64 + 8.0
+    };
+    let _ = bar.set_position(LogicalPosition::new(left, top));
+    let _ = bar.show();
+}
 
+fn set_fullbar_state(app: &AppHandle, phase: &'static str, count: usize) {
+    let _ = app.emit_to(
+        FULLBAR_LABEL,
+        "fullbar-state",
+        FullBarState { phase, count },
+    );
+}
+
+fn finish_full_page(app: &AppHandle) {
+    let _ = app.global_shortcut().unregister(escape_shortcut());
+    if let Some(bar) = app.get_webview_window(FULLBAR_LABEL) {
+        let _ = bar.hide();
+    }
+    *FULL_PAGE_TARGET.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    FULL_PAGE_PHASE.store(PHASE_IDLE, Ordering::SeqCst);
+}
+
+/// ⌘⇧9: shows the bar; the user scrolls to where the capture should end and picks
+/// "Capture to here", or "Whole page". Pressing ⌘⇧9 again means "Capture to here".
+fn start_full_page_flow(app: AppHandle) {
+    match FULL_PAGE_PHASE.load(Ordering::SeqCst) {
+        PHASE_CHOOSING => return full_page_choice(app, "here".into()),
+        PHASE_RUNNING => return full_page_choice(app, "stop".into()),
+        _ => {}
+    }
+    FULL_PAGE_PHASE.store(PHASE_CHOOSING, Ordering::SeqCst);
     std::thread::spawn(move || {
         give_focus_back(&app);
         if !ensure_screen_access() {
-            FULL_PAGE_RUNNING.store(false, Ordering::SeqCst);
+            FULL_PAGE_PHASE.store(PHASE_IDLE, Ordering::SeqCst);
             report_error(&app, SCREEN_HINT);
             return;
         }
+        let target = match mac::front_target() {
+            Ok(t) => t,
+            Err(message) => {
+                FULL_PAGE_PHASE.store(PHASE_IDLE, Ordering::SeqCst);
+                report_error(&app, message);
+                return;
+            }
+        };
+        let rect = target.rect;
+        *FULL_PAGE_TARGET.lock().unwrap_or_else(|e| e.into_inner()) = Some(target);
         let _ = app.global_shortcut().register(escape_shortcut());
-        let tray = app.tray_by_id("aureen");
-        let result = mac::capture_scrolling(&FULL_PAGE_STOP, |n| {
-            if let Some(tray) = &tray {
-                let _ = tray.set_title(Some(format!("{n}")));
-            }
-        });
-        let _ = app.global_shortcut().unregister(escape_shortcut());
-        if let Some(tray) = &tray {
-            let _ = tray.set_title(None::<&str>);
-        }
-        FULL_PAGE_RUNNING.store(false, Ordering::SeqCst);
-
-        match result.and_then(|frames| stitch::to_jpeg_data_url(&frames)) {
-            Ok(data_url) => {
-                show_panel(&app);
-                let _ = app.emit("fullpage-ready", data_url);
-            }
-            Err(message) => report_error(&app, message),
-        }
+        show_fullbar(&app, rect);
+        set_fullbar_state(&app, "choose", 0);
     });
+}
+
+/// Bar buttons: "here" | "whole" | "cancel" while choosing, "stop" | "cancel" while capturing.
+#[tauri::command]
+fn full_page_choice(app: AppHandle, choice: String) {
+    let phase = FULL_PAGE_PHASE.load(Ordering::SeqCst);
+    match (phase, choice.as_str()) {
+        (PHASE_RUNNING, "stop") | (PHASE_RUNNING, "here") => {
+            FULL_PAGE_STOP.store(true, Ordering::SeqCst)
+        }
+        (PHASE_RUNNING, "cancel") => {
+            FULL_PAGE_CANCEL.store(true, Ordering::SeqCst);
+            FULL_PAGE_STOP.store(true, Ordering::SeqCst);
+        }
+        (PHASE_CHOOSING, "cancel") => finish_full_page(&app),
+        (PHASE_CHOOSING, "here") | (PHASE_CHOOSING, "whole") => {
+            let to_here = choice == "here";
+            FULL_PAGE_PHASE.store(PHASE_RUNNING, Ordering::SeqCst);
+            FULL_PAGE_STOP.store(false, Ordering::SeqCst);
+            FULL_PAGE_CANCEL.store(false, Ordering::SeqCst);
+            std::thread::spawn(move || run_full_page(app, to_here));
+        }
+        _ => {}
+    }
+}
+
+fn run_full_page(app: AppHandle, to_here: bool) {
+    let target = FULL_PAGE_TARGET
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    let Some(target) = target else {
+        finish_full_page(&app);
+        return;
+    };
+    set_fullbar_state(&app, "running", 0);
+
+    // "Capture to here": remember the view the user scrolled to before going back to the top.
+    let end = if to_here {
+        mac::capture_target(&target).ok()
+    } else {
+        None
+    };
+    let result = mac::capture_scrolling(&target, end, &FULL_PAGE_STOP, |n| {
+        set_fullbar_state(&app, "running", n);
+    });
+    let cancelled = FULL_PAGE_CANCEL.load(Ordering::SeqCst);
+    finish_full_page(&app);
+    if cancelled {
+        return;
+    }
+    match result.and_then(|frames| stitch::to_jpeg_data_url(&frames)) {
+        Ok(data_url) => {
+            show_panel(&app);
+            let _ = app.emit("fullpage-ready", data_url);
+        }
+        Err(message) => report_error(&app, message),
+    }
 }
 
 fn percent_decode(input: &str) -> String {
@@ -500,13 +616,20 @@ pub fn run() {
                     } else if *pressed == full_page_shortcut() {
                         start_full_page_flow(app.clone());
                     } else if *pressed == escape_shortcut() {
-                        FULL_PAGE_STOP.store(true, Ordering::SeqCst);
+                        // Esc: cancel while choosing, stop ("capture to here") while scrolling.
+                        let choice = if FULL_PAGE_PHASE.load(Ordering::SeqCst) == PHASE_RUNNING {
+                            "stop"
+                        } else {
+                            "cancel"
+                        };
+                        full_page_choice(app.clone(), choice.into());
                     }
                 })
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
             toolbar_pick,
+            full_page_choice,
             set_paused,
             is_paused,
             quit_app,
@@ -594,6 +717,13 @@ pub fn run() {
                     } = event
                     {
                         let app = tray.app_handle();
+                        let opening = !app
+                            .get_webview_window(PANEL_LABEL)
+                            .and_then(|p| p.is_visible().ok())
+                            .unwrap_or(false);
+                        if opening {
+                            remember_frontmost_app();
+                        }
                         let scale = app
                             .get_webview_window(PANEL_LABEL)
                             .and_then(|w| w.scale_factor().ok())

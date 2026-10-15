@@ -89,33 +89,13 @@ export function DesktopApp() {
     };
   }, []);
 
+  const quit = (): void => {
+    if (confirm('要結束 Aureen 嗎?選單列圖示會消失,快捷鍵也會停止。')) void invoke('quit_app');
+  };
+
   const toolbar = (
     <div className="px-4 pt-3 flex-shrink-0">
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!paused}
-          onClick={() => void invoke('set_paused', { paused: !paused })}
-          title={paused ? '重新啟用快捷鍵與選字工具列' : '暫停快捷鍵與選字工具列,App 仍留在選單列'}
-          className="flex items-center gap-2 text-xs font-medium text-[#5E5A4E]"
-        >
-          <span className={`relative inline-block w-8 h-[18px] rounded-full transition-colors ${paused ? 'bg-[#D9D3C6]' : 'bg-[#C9A86C]'}`}>
-            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${paused ? 'left-[2px]' : 'left-[16px]'}`} />
-          </span>
-          {paused ? 'Aureen 已暫停' : 'Aureen 啟用中'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm('要結束 Aureen 嗎?選單列圖示會消失,快捷鍵也會停止。')) void invoke('quit_app');
-          }}
-          className="h-7 px-2.5 rounded-md text-xs font-medium text-[#B5533F] hover:bg-[#FBEDE8]"
-        >
-          結束 Aureen
-        </button>
-      </div>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className={`grid grid-cols-3 gap-1.5 ${paused ? 'opacity-60' : ''}`}>
         {ACTIONS.map((action) => (
           <button
             key={action.command}
@@ -136,9 +116,36 @@ export function DesktopApp() {
     </div>
   );
 
+  // Paused: shortcuts and the selection toolbar are off; the badge resumes in one click.
+  const titleBadge = paused ? (
+    <button
+      type="button"
+      onClick={() => void invoke('set_paused', { paused: false })}
+      title="點一下重新啟用快捷鍵與選字工具列"
+      className="ml-1 h-[22px] px-2 rounded-full bg-[#EFEAE0] text-[11px] font-semibold text-[#7A7263] hover:bg-[#E6DFD1]"
+    >
+      已暫停
+    </button>
+  ) : null;
+
+  const moreMenuItems = [
+    paused
+      ? { label: '啟用 Aureen', onClick: () => void invoke('set_paused', { paused: false }) }
+      : { label: '暫停 Aureen(停用快捷鍵與選字工具列)', onClick: () => void invoke('set_paused', { paused: true }) },
+    { label: '面板回到圖示下方', onClick: () => void invoke('dock_panel') },
+    { label: '結束 Aureen', onClick: quit, danger: true }
+  ];
+
   return (
     <div className="h-screen">
-      <SidebarApp eventTarget={bus} onClose={() => void invoke('hide_panel')} toolbar={toolbar} />
+      <SidebarApp
+        eventTarget={bus}
+        onClose={() => void invoke('hide_panel')}
+        toolbar={toolbar}
+        titleBadge={titleBadge}
+        moreMenuItems={moreMenuItems}
+        closeIconOnly
+      />
     </div>
   );
 }

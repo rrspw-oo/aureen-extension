@@ -6,9 +6,12 @@ import '@/i18n/config';
 import '@/index.css';
 import { DesktopApp } from './DesktopApp';
 import { SelectionToolbar } from './SelectionToolbar';
+import { FullPageBar } from './FullPageBar';
 
-// One bundle, two windows: the menu bar panel and the selection toolbar (index.html#toolbar).
-const isToolbar = window.location.hash === '#toolbar';
+// One bundle, three windows: the menu bar panel, the selection toolbar (#toolbar) and the
+// full-page capture bar (#fullbar).
+const view = window.location.hash.slice(1);
+const isToolbar = view === 'toolbar' || view === 'fullbar';
 if (!isToolbar) {
   const style = document.createElement('style');
   style.textContent = 'header { cursor: grab; } header button, header [role="menu"] { cursor: pointer; }';
@@ -20,5 +23,7 @@ if (isToolbar) {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>{isToolbar ? <SelectionToolbar /> : <DesktopApp />}</React.StrictMode>
+  <React.StrictMode>
+    {view === 'toolbar' ? <SelectionToolbar /> : view === 'fullbar' ? <FullPageBar /> : <DesktopApp />}
+  </React.StrictMode>
 );

@@ -20,7 +20,7 @@ First launch: macOS asks for **Screen Recording** permission for the terminal (d
 |---|---|---|
 | `⌘⇧1` | Select text → highlight | Copies the selection of the frontmost app, adds the browser tab URL/title (Safari, Chrome, Arc, Brave, Edge, Vivaldi, Opera) or the app/window name, and opens the highlight form. Your text clipboard is restored. |
 | `⌘⇧2` | Capture a region | macOS region picker → capture form (trim, tags, price, PDF). |
-| `⌘⇧9` | Full-page capture | Scrolls the frontmost window from the top with Page Down and stitches the frames (fixed toolbars kept once). Press **Esc** (or `⌘⇧9` again) to stop at what is on screen — "capture to here". The menu bar shows the frame count meanwhile. |
+| `⌘⇧9` | Full-page capture | Shows the extension's bar above the front window: scroll to where the capture should end and click **Capture to here** (or **Whole page** / **Cancel**). Aureen then scrolls from the top with Page Down and stitches frames of that window alone (fixed toolbars kept once) until it reaches your chosen view. While it runs, the bar shows the frame count with **Capture to here** (stop now) and **Cancel**. Esc = cancel while choosing, stop while capturing; `⌘⇧9` again = Capture to here. |
 
 All three are also in the tray menu (right-click) and as buttons at the top of the panel.
 
@@ -28,7 +28,7 @@ All three are also in the tray menu (right-click) and as buttons at the top of t
 
 **Panel.** Drag the header to move the panel anywhere; once moved it stays there and no longer closes when you click elsewhere. Tray menu → *面板回到圖示下方* docks it again.
 
-**Pause / quit.** The switch at the top of the panel (or tray menu → *暫停 Aureen*) turns off the shortcuts and the selection toolbar while keeping Aureen in the menu bar (the icon shows Ⅱ). *結束 Aureen* quits the app.
+**Panel controls.** ✕ hides the panel. The ⋯ menu holds language, *暫停 Aureen* / *啟用 Aureen* (shortcuts and selection toolbar off, Aureen stays in the menu bar and its icon shows Ⅱ; a 已暫停 badge next to the title resumes in one click), *面板回到圖示下方*, *刪除所有重點* and *結束 Aureen* (quits). The same pause / dock / quit items are in the tray menu.
 
 ## Permissions
 

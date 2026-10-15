@@ -87,6 +87,21 @@ fn find_shift(a: &[(u64, bool)], b: &[(u64, bool)], top: usize, m: usize) -> Opt
     best.map(|(s, _, _)| s)
 }
 
+/// True when `next` shows content that continues `prev` within one screen (they overlap).
+/// Used for "capture to here": the scroll stops once the user's chosen view is in reach.
+pub fn continues_into(prev: &RgbaImage, next: &RgbaImage) -> bool {
+    if prev.dimensions() != next.dimensions() {
+        return false;
+    }
+    let (a, b) = (row_signatures(prev), row_signatures(next));
+    if a == b {
+        return true;
+    }
+    let (top, bottom) = static_bands(&a, &b);
+    let m = a.len().saturating_sub(top + bottom);
+    m > 0 && find_shift(&a, &b, top, m).is_some()
+}
+
 pub fn frames_identical(a: &RgbaImage, b: &RgbaImage) -> bool {
     a.dimensions() == b.dimensions() && a.as_raw() == b.as_raw()
 }
@@ -226,6 +241,15 @@ mod tests {
         let frames = vec![window(&p, 0, 200, 10, 0), window(&p, 150, 200, 10, 0)];
         let url = to_jpeg_data_url(&frames).unwrap();
         assert!(url.starts_with("data:image/jpeg;base64,"));
+    }
+
+    #[test]
+    fn detects_when_the_chosen_end_view_is_within_reach() {
+        let p = page(1400, 160);
+        let at = |s| window(&p, s, 300, 40, 20);
+        assert!(continues_into(&at(0), &at(200)));
+        assert!(continues_into(&at(0), &at(0)));
+        assert!(!continues_into(&at(0), &at(700)));
     }
 
     #[test]

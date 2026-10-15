@@ -4,7 +4,8 @@
   "description": "Permissions for the menu bar panel",
   "windows": [
     "panel",
-    "toolbar"
+    "toolbar",
+    "fullbar"
   ],
   "permissions": [
     "core:default",

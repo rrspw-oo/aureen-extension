@@ -202,9 +202,15 @@ interface SidebarAppProps {
   onClose?: () => void;
   // Extra row rendered under the header (the desktop app's capture actions).
   toolbar?: React.ReactNode;
+  // Shown next to the "Aureen" title (e.g. a paused badge).
+  titleBadge?: React.ReactNode;
+  // App-level items appended to the "more" menu (e.g. pause / quit).
+  moreMenuItems?: { label: string; onClick: () => void; danger?: boolean }[];
+  // Render the close button as a bare ✕ icon.
+  closeIconOnly?: boolean;
 }
 
-export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, toolbar }) => {
+export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, toolbar, titleBadge, moreMenuItems, closeIconOnly }) => {
   const { t } = useTranslation();
   const [language, setLanguage] = useState<LanguageSetting>('auto');
   const [data, setData] = useState<Record<string, unknown>>({});
@@ -312,6 +318,7 @@ export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, to
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[#C9A86C]" />
           <span className="text-base font-semibold tracking-[0.02em]">Aureen</span>
+          {titleBadge}
         </div>
         <div className="flex items-center gap-1">
           <IconButton label={t('shell.export')} expanded={openMenu === 'export'} onClick={() => setOpenMenu(openMenu === 'export' ? null : 'export')}>
@@ -320,6 +327,11 @@ export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, to
           <IconButton label={t('shell.more')} expanded={openMenu === 'more'} onClick={() => setOpenMenu(openMenu === 'more' ? null : 'more')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#5E5A4E"><circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" /></svg>
           </IconButton>
+          {closeIconOnly ? (
+            <IconButton label={t('common.close')} onClick={close}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </IconButton>
+          ) : (
           <button
             type="button"
             title={t('shell.closeTitle')}
@@ -329,6 +341,7 @@ export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, to
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
             {t('common.close')}
           </button>
+          )}
         </div>
 
         {openMenu && (
@@ -367,7 +380,15 @@ export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, to
                   </button>
                 ))}
                 <div className="h-px bg-[#ECE4D4] my-1" />
+                {/* App controls first, destructive actions last. */}
+                {moreMenuItems?.filter((item) => !item.danger).map((item) => (
+                  <MenuAction key={item.label} label={item.label} onClick={() => runMenu(item.onClick)} />
+                ))}
+                {moreMenuItems?.some((item) => !item.danger) && <div className="h-px bg-[#ECE4D4] my-1" />}
                 <MenuAction label={t('shell.deleteAll')} onClick={() => runMenu(handleClearAll)} danger />
+                {moreMenuItems?.filter((item) => item.danger).map((item) => (
+                  <MenuAction key={item.label} label={item.label} onClick={() => runMenu(item.onClick)} danger />
+                ))}
               </>
             )}
           </div>

@@ -40,6 +40,22 @@
         "shadow": false,
         "focus": false,
         "acceptFirstMouse": true
+      },
+      {
+        "label": "fullbar",
+        "title": "Aureen full page",
+        "url": "index.html#fullbar",
+        "width": 640,
+        "height": 84,
+        "visible": false,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "focus": false,
+        "acceptFirstMouse": true
       }
     ],
     "security": {

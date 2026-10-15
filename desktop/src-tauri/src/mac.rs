@@ -188,6 +188,29 @@ pub fn grab_selection() -> Result<Selection, String> {
     })
 }
 
+/// Unix pid of the frontmost app.
+pub fn frontmost_pid() -> Option<i32> {
+    osascript(r#"tell application "System Events" to get unix id of first application process whose frontmost is true"#)
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+}
+
+/// Brings the app with `pid` to the front (so keystrokes such as Page Down reach it).
+pub fn activate_pid(pid: i32) {
+    let _ = osascript(&format!(
+        r#"tell application "System Events" to set frontmost of (first application process whose unix id is {pid}) to true"#
+    ));
+}
+
+/// The window a full-page capture works on.
+pub struct Target {
+    pub pid: i32,
+    /// CGWindowID, so frames show just that window (Aureen's own bar never ends up in them).
+    pub window_id: Option<u32>,
+    /// Frame in screen points: fallback capture area and where to put the bar.
+    pub rect: (i64, i64, i64, i64),
+}
+
 /// Frontmost window as (x, y, width, height) in screen points.
 fn front_window_bounds() -> Result<(i64, i64, i64, i64), String> {
     let out = osascript(
@@ -210,14 +233,72 @@ return (x as text) & "," & (y as text) & "," & (w as text) & "," & (h as text)"#
     }
 }
 
-fn capture_rect(x: i64, y: i64, w: i64, h: i64) -> Result<RgbaImage, String> {
+/// Front-most normal window (layer 0) owned by `pid`; the window list is ordered front to back.
+#[cfg(target_os = "macos")]
+fn front_window_id(pid: i32) -> Option<u32> {
+    use core_foundation::base::{CFType, TCFType};
+    use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
+    use core_foundation::number::CFNumber;
+    use core_foundation::string::CFString;
+    use core_graphics::window::{
+        copy_window_info, kCGNullWindowID, kCGWindowLayer, kCGWindowListExcludeDesktopElements,
+        kCGWindowListOptionOnScreenOnly, kCGWindowNumber, kCGWindowOwnerPID,
+    };
+
+    let list = copy_window_info(
+        kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
+        kCGNullWindowID,
+    )?;
+    let (owner_key, layer_key, number_key) = unsafe {
+        (
+            CFString::wrap_under_get_rule(kCGWindowOwnerPID),
+            CFString::wrap_under_get_rule(kCGWindowLayer),
+            CFString::wrap_under_get_rule(kCGWindowNumber),
+        )
+    };
+    let number = |dict: &CFDictionary<CFString, CFType>, key: &CFString| -> Option<i64> {
+        dict.find(key)
+            .and_then(|v| v.downcast::<CFNumber>())
+            .and_then(|n| n.to_i64())
+    };
+    for item in list.iter() {
+        let dict: CFDictionary<CFString, CFType> =
+            unsafe { CFDictionary::wrap_under_get_rule(*item as CFDictionaryRef) };
+        if number(&dict, &owner_key) == Some(pid as i64) && number(&dict, &layer_key) == Some(0) {
+            return number(&dict, &number_key).map(|n| n as u32);
+        }
+    }
+    None
+}
+
+#[cfg(not(target_os = "macos"))]
+fn front_window_id(_pid: i32) -> Option<u32> {
+    None
+}
+
+/// Picks the frontmost window as the full-page capture target.
+pub fn front_target() -> Result<Target, String> {
+    let pid = frontmost_pid().ok_or_else(|| ACCESSIBILITY_HINT.to_string())?;
+    let rect = front_window_bounds()?;
+    Ok(Target {
+        pid,
+        window_id: front_window_id(pid),
+        rect,
+    })
+}
+
+pub fn capture_target(target: &Target) -> Result<RgbaImage, String> {
     let path = std::env::temp_dir().join(format!("aureen-frame-{}.png", stamp()));
-    let status = Command::new("/usr/sbin/screencapture")
-        .args(["-x", "-t", "png"])
-        .arg(format!("-R{x},{y},{w},{h}"))
-        .arg(&path)
-        .status()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = Command::new("/usr/sbin/screencapture");
+    cmd.args(["-x", "-t", "png"]);
+    match target.window_id {
+        Some(id) => cmd.args(["-o", "-l"]).arg(id.to_string()),
+        None => {
+            let (x, y, w, h) = target.rect;
+            cmd.arg(format!("-R{x},{y},{w},{h}"))
+        }
+    };
+    let status = cmd.arg(&path).status().map_err(|e| e.to_string())?;
     if !status.success() || !path.exists() {
         return Err("截圖失敗(請確認「螢幕錄製」權限)".into());
     }
@@ -235,28 +316,39 @@ fn key_code(code: u32) -> Result<(), String> {
 
 const MAX_FRAMES: usize = 40;
 
-/// Scrolls the frontmost window from the top with Page Down, capturing it after every step,
-/// until the content stops moving, `stop` is set (Esc), or `MAX_FRAMES` is reached.
+/// Scrolls the target window from the top with Page Down, capturing it after every step.
+/// Stops when the content stops moving, when `end` (the view the user chose with
+/// "Capture to here") comes within reach, when `stop` is set, or after `MAX_FRAMES`.
 pub fn capture_scrolling(
+    target: &Target,
+    end: Option<RgbaImage>,
     stop: &AtomicBool,
     on_frame: impl Fn(usize),
 ) -> Result<Vec<RgbaImage>, String> {
-    let (x, y, w, h) = front_window_bounds()?;
+    activate_pid(target.pid);
+    sleep(Duration::from_millis(250));
     key_code(115)?; // Home
     sleep(Duration::from_millis(500));
 
     let mut frames: Vec<RgbaImage> = Vec::new();
     loop {
-        let frame = capture_rect(x, y, w, h)?;
+        let frame = capture_target(target)?;
         if frames
             .last()
             .is_some_and(|prev| crate::stitch::frames_identical(prev, &frame))
         {
             break; // reached the end of the page
         }
+        if let Some(end) = &end {
+            if crate::stitch::continues_into(&frame, end) {
+                frames.push(frame);
+                frames.push(end.clone());
+                on_frame(frames.len());
+                break;
+            }
+        }
         frames.push(frame);
         on_frame(frames.len());
-        // Esc means "stop here": the view on screen when it was pressed is already captured.
         if stop.load(Ordering::SeqCst) || frames.len() >= MAX_FRAMES {
             break;
         }
