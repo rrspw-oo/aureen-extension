@@ -90,7 +90,7 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
           }
         }}
       >
-        <p className="m-0 px-3.5 py-3 rounded-[10px] bg-[#FBF6EB] text-sm leading-relaxed text-[#2E2A22] line-clamp-6">{text}</p>
+        <p className="m-0 px-3.5 py-3 rounded-[10px] bg-[#FBF6EB] text-sm leading-relaxed text-[#2E2A22] max-h-44 overflow-y-auto whitespace-pre-wrap break-words">{text}</p>
 
         <div className="flex flex-col gap-1.5">
           <FieldLabel htmlFor="hl-title" label={t('form.title')} hint={t('form.titleHint')} />

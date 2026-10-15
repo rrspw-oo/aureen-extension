@@ -254,13 +254,14 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
           onClick={() => setShowLightbox(false)}
         >
           <div className="relative max-w-6xl max-h-[90vh] p-4 overflow-y-auto">
-            <div className="absolute top-6 right-6 flex items-center gap-2">
+            {/* Actions sit above the image (sticky) instead of on top of it. */}
+            <div className="sticky top-0 z-10 mb-2 flex items-center justify-end gap-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   downloadDataUrl(capture.imageData, `aureen-capture-${capture.createdAt}.jpg`);
                 }}
-                className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors"
+                className="p-2 bg-black/70 hover:bg-black/90 ring-1 ring-white/30 rounded-full transition-colors"
                 title={t('common.download')}
               >
                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -272,14 +273,14 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
                   e.stopPropagation();
                   saveCaptureAsPdf(capture.imageData, capture.title).catch(() => alert(t('common.pdfFailed')));
                 }}
-                className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors"
+                className="p-2 bg-black/70 hover:bg-black/90 ring-1 ring-white/30 rounded-full transition-colors"
                 title={t('common.savePdf')}
               >
                 <span className="block px-0.5 text-[10px] font-bold leading-4 text-white">PDF</span>
               </button>
               <button
                 onClick={() => setShowLightbox(false)}
-                className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors"
+                className="p-2 bg-black/70 hover:bg-black/90 ring-1 ring-white/30 rounded-full transition-colors"
               >
                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -19,11 +19,13 @@
         "height": 640,
         "visible": false,
         "decorations": false,
-        "resizable": false,
+        "resizable": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "shadow": true,
-        "focus": true
+        "focus": true,
+        "minWidth": 360,
+        "minHeight": 480
       },
       {
         "label": "toolbar",

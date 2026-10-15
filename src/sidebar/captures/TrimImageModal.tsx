@@ -77,6 +77,14 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
     onApply(canvas.toDataURL('image/jpeg', 0.95));
   };
 
+  // Labels sit on the kept side of each line so they never leave the image.
+  const LABEL_POSITION: Record<Edge, React.CSSProperties> = {
+    top: { left: 8, top: 13 },
+    bottom: { left: 8, bottom: 13 },
+    left: { top: 40, left: 13 },
+    right: { top: 40, right: 13 }
+  };
+
   const handleStyle = (edge: Edge, fraction: number): React.CSSProperties => {
     const horizontal = edge === 'top' || edge === 'bottom';
     return {
@@ -132,8 +140,8 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
                 <div key={edge} style={handleStyle(edge, value)} onPointerDown={handlePointerDown(edge)}>
                   <div className={horizontal ? 'w-full h-[3px] bg-[#C9A86C]' : 'h-full w-[3px] bg-[#C9A86C]'} />
                   <span
-                    className="absolute px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417]"
-                    style={horizontal ? { left: 8 } : { top: 8 }}
+                    className="absolute px-2 py-0.5 text-[10px] font-semibold rounded bg-[#C9A86C] text-[#2C2417] whitespace-nowrap pointer-events-none"
+                    style={LABEL_POSITION[edge]}
                   >
                     {t(`trim.${edge}`)}
                   </span>
