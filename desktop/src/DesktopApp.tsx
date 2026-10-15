@@ -1,85 +1,94 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { CapturesView } from '@/sidebar/captures/CapturesView';
-import { storageService } from '@/lib/highlight-store';
-import type { LanguageSetting } from '@/types/highlight';
+import { SidebarApp } from '@/sidebar/shell';
 
-const LANGUAGES: { value: LanguageSetting; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'en', label: 'English' },
-  { value: 'zh-TW', label: '繁體中文' }
-];
+interface HighlightPayload {
+  text: string;
+  url: string;
+  pageTitle: string;
+}
 
+const ACTIONS = [
+  { command: 'start_selection', label: '儲存選取文字', keys: '⌘⇧1' },
+  { command: 'start_capture', label: '截取區域', keys: '⌘⇧2' },
+  { command: 'start_full_page', label: '整頁截圖', keys: '⌘⇧9' }
+] as const;
+
+/**
+ * The menu bar panel: the extension's own sidebar (highlights, captures, export, settings),
+ * fed by the native shortcuts instead of a web page.
+ */
 export function DesktopApp() {
-  const { t } = useTranslation();
-  const [data, setData] = useState<Record<string, unknown>>({});
+  const bus = useMemo(() => new EventTarget(), []);
   const [error, setError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<LanguageSetting>('auto');
 
   useEffect(() => {
-    void storageService.getSettings().then((s) => setLanguage(s.language ?? 'auto'));
-  }, []);
+    const send = (detail: Record<string, unknown>): void => {
+      setError(null);
+      bus.dispatchEvent(new CustomEvent('sidebar-data', { detail }));
+    };
+    const capture = (imageData: string, fullPage: boolean): void =>
+      send({ mode: 'capture', imageData, fullPage, url: 'aureen://screenshot', timestamp: Date.now(), captureId: `capture_${Date.now()}` });
 
-  const handleCapture = useCallback((imageData: string) => {
-    setError(null);
-    setData({ mode: 'capture', imageData, url: 'aureen://screenshot', timestamp: Date.now(), captureId: `capture_${Date.now()}` });
-  }, []);
+    const subscriptions = [
+      listen<string>('capture-ready', (e) => capture(e.payload, false)),
+      listen<string>('fullpage-ready', (e) => capture(e.payload, true)),
+      listen<HighlightPayload>('highlight-ready', (e) =>
+        send({ mode: 'highlight', text: e.payload.text, url: e.payload.url, pageTitle: e.payload.pageTitle })
+      ),
+      listen<string>('capture-error', (e) => setError(e.payload))
+    ];
+    return () => subscriptions.forEach((p) => void p.then((off) => off()));
+  }, [bus]);
 
-  // The shared captures view asks the host page to start a capture via postMessage.
   useEffect(() => {
+    // The shared captures view asks its host page to start a region capture.
     const onMessage = (event: MessageEvent): void => {
       if (event.data?.type === 'AUREEN_START_SCREENSHOT') void invoke('start_capture');
     };
+    // Web links (sources, linked pages) open in the default browser.
+    const onClick = (event: MouseEvent): void => {
+      const link = (event.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (link && /^https?:/.test(link.href) && !link.href.startsWith(window.location.origin)) {
+        event.preventDefault();
+        void invoke('open_url', { url: link.href });
+      }
+    };
     window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
+    document.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      document.removeEventListener('click', onClick, true);
+    };
   }, []);
 
-  useEffect(() => {
-    const ready = listen<string>('capture-ready', (e) => handleCapture(e.payload));
-    const failed = listen<string>('capture-error', (e) => setError(e.payload));
-    return () => {
-      void ready.then((off) => off());
-      void failed.then((off) => off());
-    };
-  }, [handleCapture]);
+  const toolbar = (
+    <div className="px-4 pt-3 flex-shrink-0">
+      <div className="grid grid-cols-3 gap-1.5">
+        {ACTIONS.map((action) => (
+          <button
+            key={action.command}
+            type="button"
+            onClick={() => void invoke(action.command)}
+            className="h-12 rounded-lg border border-[#E2D8C4] bg-white hover:bg-[#FBF5EA] flex flex-col items-center justify-center leading-tight"
+          >
+            <span className="text-[12px] font-semibold text-[#5E4A22]">{action.label}</span>
+            <span className="text-[10px] text-[#9A8F78]">{action.keys}</span>
+          </button>
+        ))}
+      </div>
+      {error && (
+        <p className="mt-2 rounded-lg bg-[#FBEDE8] px-3 py-2 text-xs text-[#9A3A24]" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-screen bg-[#FBFAF7] text-[#1F1F2E]">
-      <header className="h-[52px] flex-shrink-0 pl-4 pr-3 flex items-center justify-between bg-white border-b border-[#ECE4D4]">
-        <span className="text-base font-semibold tracking-[0.02em]">Aureen</span>
-        <div className="flex items-center gap-2">
-          <select
-            aria-label={t('shell.language')}
-            value={language}
-            onChange={(e) => {
-              const value = e.target.value as LanguageSetting;
-              setLanguage(value);
-              void storageService.saveSettings({ language: value });
-            }}
-            className="h-8 rounded-lg border border-[#E2D8C4] bg-white px-2 text-xs text-[#5E5A4E]"
-          >
-            {LANGUAGES.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => void invoke('start_capture')}
-            className="h-8 px-3 rounded-lg border border-[#D9B377] text-xs font-semibold text-[#4A3A1C] bg-gradient-to-b from-[#F6DFB2] to-[#D9B377]"
-          >
-            {t('common.capture', { defaultValue: '截圖' })} ⌘⇧2
-          </button>
-        </div>
-      </header>
-
-      {error && <p className="m-3 text-xs text-[#B3402A]">{error}</p>}
-
-      <div className="flex-1 min-h-0">
-        <CapturesView initialData={data} />
-      </div>
-
+    <div className="h-screen">
+      <SidebarApp eventTarget={bus} onClose={() => void invoke('hide_panel')} toolbar={toolbar} />
     </div>
   );
 }

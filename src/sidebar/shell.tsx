@@ -25,6 +25,8 @@ let shadowHost: HTMLDivElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
 let reactRoot: ReturnType<typeof createRoot> | null = null;
 let highlightData: Record<string, unknown> = {};
+// Set when SidebarApp is hosted outside the page Shadow DOM (the desktop app).
+let externalTarget: EventTarget | null = null;
 
 /**
  * Mount sidebar in Shadow DOM with Constructable Stylesheets
@@ -144,9 +146,10 @@ export function toggleSidebarShadow(opts?: { open?: boolean; source?: 'manual' |
  */
 export function resetCaptureData(): void {
   highlightData = {};
-  if (!shadowRoot) return;
+  const target = shadowRoot ?? externalTarget;
+  if (!target) return;
   const event = new CustomEvent('sidebar-data', { detail: {} });
-  shadowRoot.dispatchEvent(event);
+  target.dispatchEvent(event);
 }
 
 /**
@@ -192,7 +195,16 @@ const LANGUAGE_OPTIONS: { value: LanguageSetting; label: string }[] = [
   { value: 'zh-TW', label: '繁體中文' }
 ];
 
-const SidebarApp: React.FC = () => {
+interface SidebarAppProps {
+  // Where 'sidebar-data' / 'sidebar-action' events arrive; defaults to the page's Shadow DOM.
+  eventTarget?: EventTarget;
+  // Replaces the default "hide sidebar, show floating button" close behaviour.
+  onClose?: () => void;
+  // Extra row rendered under the header (the desktop app's capture actions).
+  toolbar?: React.ReactNode;
+}
+
+export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, toolbar }) => {
   const { t } = useTranslation();
   const [language, setLanguage] = useState<LanguageSetting>('auto');
   const [data, setData] = useState<Record<string, unknown>>({});
@@ -229,7 +241,11 @@ const SidebarApp: React.FC = () => {
     return () => chrome.storage.onChanged.removeListener(loadCounts);
   }, []);
 
+  const close = (): void => (onClose ? onClose() : hideSidebarShadow(true));
+
   useEffect(() => {
+    const target: EventTarget | null = eventTarget ?? shadowRoot;
+    if (eventTarget) externalTarget = eventTarget;
     const handleData = (event: Event): void => {
       const customEvent = event as CustomEvent;
       const eventData = customEvent.detail || {};
@@ -244,38 +260,31 @@ const SidebarApp: React.FC = () => {
       }
     };
 
-    if (shadowRoot) {
-      shadowRoot.addEventListener('sidebar-data', handleData);
-    }
+    target?.addEventListener('sidebar-data', handleData);
 
     const handleClose = (event: Event): void => {
       if ((event as CustomEvent).detail?.type === 'CLOSE_SIDEBAR') {
-        hideSidebarShadow(true);
+        close();
       }
     };
 
-    if (shadowRoot) {
-      shadowRoot.addEventListener('sidebar-action', handleClose);
-    }
+    target?.addEventListener('sidebar-action', handleClose);
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || event.isComposing) return;
       const origin = event.composedPath()[0] as HTMLElement | undefined;
       if (origin && (origin.tagName === 'INPUT' || origin.tagName === 'TEXTAREA' || origin.isContentEditable)) return;
-      if (shadowRoot?.querySelector('[data-aureen-modal]')) return;
-      hideSidebarShadow(true);
+      if ((shadowRoot ?? document).querySelector('[data-aureen-modal]')) return;
+      close();
     };
 
-    if (shadowRoot) {
-      shadowRoot.addEventListener('keydown', handleKeyDown as EventListener);
-    }
+    const keyTarget: EventTarget = shadowRoot && !eventTarget ? shadowRoot : window;
+    keyTarget.addEventListener('keydown', handleKeyDown as EventListener);
 
     return () => {
-      if (shadowRoot) {
-        shadowRoot.removeEventListener('sidebar-data', handleData);
-        shadowRoot.removeEventListener('sidebar-action', handleClose);
-        shadowRoot.removeEventListener('keydown', handleKeyDown as EventListener);
-      }
+      target?.removeEventListener('sidebar-data', handleData);
+      target?.removeEventListener('sidebar-action', handleClose);
+      keyTarget.removeEventListener('keydown', handleKeyDown as EventListener);
     };
   }, []);
 
@@ -314,7 +323,7 @@ const SidebarApp: React.FC = () => {
           <button
             type="button"
             title={t('shell.closeTitle')}
-            onClick={() => hideSidebarShadow(true)}
+            onClick={close}
             className="h-8 px-2.5 flex items-center gap-1.5 border border-[#E2D8C4] rounded-lg bg-white text-xs font-medium text-[#5E5A4E] hover:bg-[#F4F1EA]"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E5A4E" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -364,6 +373,8 @@ const SidebarApp: React.FC = () => {
           </div>
         )}
       </header>
+
+      {toolbar}
 
       <div className="px-4 pt-3 flex-shrink-0">
         <div role="tablist" className="grid grid-cols-2 gap-1 p-1 bg-[#F1EBDF] rounded-[10px]">

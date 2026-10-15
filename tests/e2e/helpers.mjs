@@ -41,7 +41,7 @@ export async function serveFixtures() {
 export async function launch({ lang = 'en-US', width = 1280, height = 860, viewport = null } = {}) {
   const server = await serveFixtures();
   const ctx = await chromium.launchPersistentContext(join(tmpdir(), `aureen-e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`), {
-    channel: 'chrome',
+    ...(process.env.AUREEN_CHROME ? { executablePath: process.env.AUREEN_CHROME } : { channel: 'chrome' }),
     headless: true,
     ignoreDefaultArgs: ['--disable-extensions'],
     locale: lang,

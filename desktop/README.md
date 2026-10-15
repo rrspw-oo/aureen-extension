@@ -14,23 +14,44 @@ npm run tauri dev
 
 First launch: macOS asks for **Screen Recording** permission for the terminal (dev) or Aureen (built app). Grant it, then restart the app.
 
+## Shortcuts
+
+| Shortcut | Extension equivalent | What it does |
+|---|---|---|
+| `⌘⇧1` | Select text → highlight | Copies the selection of the frontmost app, adds the browser tab URL/title (Safari, Chrome, Arc, Brave, Edge, Vivaldi, Opera) or the app/window name, and opens the highlight form. Your text clipboard is restored. |
+| `⌘⇧2` | Capture a region | macOS region picker → capture form (trim, tags, price, PDF). |
+| `⌘⇧9` | Full-page capture | Scrolls the frontmost window from the top with Page Down and stitches the frames (fixed toolbars kept once). Press **Esc** (or `⌘⇧9` again) to stop at what is on screen — "capture to here". The menu bar shows the frame count meanwhile. |
+
+All three are also in the tray menu (right-click) and as buttons at the top of the panel.
+
+## Permissions
+
+- **Screen Recording** – region and full-page capture.
+- **Accessibility** – `⌘⇧1` (sends ⌘C) and `⌘⇧9` (window position, Page Down).
+- **Automation** – macOS asks once per browser the first time a highlight reads its tab URL.
+
+In development these are granted to your terminal app; quit and reopen it after granting.
+
 ## What to check
 
-1. A sun icon appears in the menu bar and there is no Dock icon.
-2. Click it: a panel opens right under the icon; click elsewhere: it closes.
-3. Press `⌘⇧2`, drag a region: the panel opens with the screenshot, OCR text (zh-TW + en) and the price found by `src/lib/price.ts`.
-4. Right-click the icon for the capture / quit menu.
+1. Menu bar icon, no Dock icon; click → panel under the icon (the extension's full sidebar: Highlights / Captures tabs, export menu, language, delete all).
+2. Select text in Safari/Chrome → `⌘⇧1` → highlight form with the page title; saved highlights are grouped by page.
+3. `⌘⇧2` → region → capture form; trim, tags, price, Download / Save as PDF (files go to `~/Downloads`).
+4. Open a long page → `⌘⇧9` → wait or press Esc → one tall capture you can trim.
+5. Export handbook: pick items, name the PDF.
 
 ## How it works
 
-- `src-tauri/src/lib.rs` – tray icon (template image), popover placement, global shortcut, and `screencapture -i -x` for the region picker.
-- `src/chrome-shim.ts` – a tiny `chrome.storage` / `chrome.runtime` replacement (IndexedDB-backed), so the extension's own captures UI (`../src/sidebar/captures`, tags, compare, handbook export) runs unchanged in the desktop panel.
-- `src/native-save.ts` + `save_download` (Rust) – exports (PDF / JSON / Markdown / images) are written to `~/Downloads` and revealed in Finder, because WKWebView ignores `<a download>`.
-- OCR is the extension's Tesseract setup (`../public/tesseract`).
+- `src-tauri/src/lib.rs` – tray icon, popover placement, shortcuts, flows, `save_download`, `open_url`.
+- `src-tauri/src/mac.rs` – osascript / screencapture / pbcopy glue (selection, window bounds, scrolling capture).
+- `src-tauri/src/stitch.rs` – pure image stitching, unit-tested (`cargo test` works on any OS).
+- `src/DesktopApp.tsx` – hosts the extension's `SidebarApp` (`../src/sidebar/shell.tsx`) and feeds it native events.
+- `src/chrome-shim.ts` – `chrome.storage` / `chrome.runtime` replacement backed by IndexedDB, so the shared UI runs unchanged.
+- `src/native-save.ts` – downloads go through Rust because WKWebView ignores `<a download>`.
 
-## Not done yet
+## Differences from the extension
 
-- Native Vision OCR (faster, better zh-TW) instead of Tesseract.js.
-- Highlights tab (needs a web page DOM; stays in the extension).
-- Storage meter still shows the extension's 10 MB quota text.
-- Free-tier limits and license key activation.
+- Highlights are not painted back onto web pages (the app cannot draw inside other apps); "Show on page" is therefore never offered.
+- Full-page capture drives the window with Page Down; apps where Page Down moves a text cursor instead of scrolling capture only one screen.
+- Only the text part of the clipboard is restored after `⌘⇧1`.
+- OCR still uses Tesseract.js (Vision OCR is a planned upgrade).

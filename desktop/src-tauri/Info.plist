@@ -4,6 +4,8 @@
 <dict>
   <key>LSUIElement</key>
   <true/>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Aureen reads the selected text and the current browser tab when you save a highlight.</string>
   <key>NSScreenCaptureUsageDescription</key>
   <string>Aureen needs Screen Recording access to capture the area you select.</string>
 </dict>

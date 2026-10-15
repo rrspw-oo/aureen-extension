@@ -1,9 +1,14 @@
+mod mac;
+mod stitch;
+
 use base64::Engine;
+use serde::Serialize;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     image::Image,
-    menu::{Menu, MenuItem},
+    menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, PhysicalPosition, WindowEvent,
 };
@@ -78,10 +83,28 @@ fn place_panel_under(app: &AppHandle, tray_pos: PhysicalPosition<f64>, tray_size
 }
 
 fn show_panel(app: &AppHandle) {
+    // The app may have been hidden to hand focus back to the user's window.
+    #[cfg(target_os = "macos")]
+    let _ = app.show();
     if let Some(panel) = app.get_webview_window(PANEL_LABEL) {
         let _ = panel.show();
         let _ = panel.set_focus();
     }
+}
+
+fn hide_panel_window(app: &AppHandle) {
+    if let Some(panel) = app.get_webview_window(PANEL_LABEL) {
+        let _ = panel.hide();
+    }
+}
+
+/// Hides Aureen so the window the user was working in is frontmost again,
+/// and waits for the shortcut's modifier keys to be released.
+fn give_focus_back(app: &AppHandle) {
+    hide_panel_window(app);
+    #[cfg(target_os = "macos")]
+    let _ = app.hide();
+    std::thread::sleep(std::time::Duration::from_millis(450));
 }
 
 fn toggle_panel(app: &AppHandle) {
@@ -94,18 +117,19 @@ fn toggle_panel(app: &AppHandle) {
     }
 }
 
+fn report_error(app: &AppHandle, message: impl Into<String>) {
+    show_panel(app);
+    let _ = app.emit("capture-error", message.into());
+}
+
+const SCREEN_HINT: &str = "需要「螢幕錄製」權限:系統設定 → 隱私權與安全性 → 螢幕與系統錄音,開啟後完全結束並重開 App(開發時是你用的終端機)。";
+
 fn start_capture_flow(app: AppHandle) {
     // The picker blocks until the user finishes, so keep it off the event loop thread.
     std::thread::spawn(move || {
-        if let Some(panel) = app.get_webview_window(PANEL_LABEL) {
-            let _ = panel.hide();
-        }
+        hide_panel_window(&app);
         if !ensure_screen_access() {
-            show_panel(&app);
-            let _ = app.emit(
-                "capture-error",
-                "需要「螢幕錄製」權限:系統設定 → 隱私權與安全性 → 螢幕與系統錄音,開啟後完全結束並重開 App(開發時是你用的終端機)。",
-            );
+            report_error(&app, SCREEN_HINT);
             return;
         }
         match capture_region() {
@@ -114,10 +138,82 @@ fn start_capture_flow(app: AppHandle) {
                 let _ = app.emit("capture-ready", data_url);
             }
             Ok(None) => {}
-            Err(message) => {
+            Err(message) => report_error(&app, message),
+        }
+    });
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct HighlightPayload {
+    text: String,
+    url: String,
+    page_title: String,
+}
+
+/// ⌘⇧1: saves the text selected in any app as a highlight (the desktop "highlight" action).
+fn start_selection_flow(app: AppHandle) {
+    std::thread::spawn(move || {
+        give_focus_back(&app);
+        match mac::grab_selection() {
+            Ok(sel) => {
                 show_panel(&app);
-                let _ = app.emit("capture-error", message);
+                let _ = app.emit(
+                    "highlight-ready",
+                    HighlightPayload {
+                        text: sel.text,
+                        url: sel.url,
+                        page_title: sel.page_title,
+                    },
+                );
             }
+            Err(message) => report_error(&app, message),
+        }
+    });
+}
+
+static FULL_PAGE_RUNNING: AtomicBool = AtomicBool::new(false);
+static FULL_PAGE_STOP: AtomicBool = AtomicBool::new(false);
+
+fn escape_shortcut() -> Shortcut {
+    Shortcut::new(None, Code::Escape)
+}
+
+/// ⌘⇧9: scrolls the frontmost window and stitches a full-page capture.
+/// Esc (or ⌘⇧9 again) stops at the part currently on screen, like "capture to here".
+fn start_full_page_flow(app: AppHandle) {
+    if FULL_PAGE_RUNNING.swap(true, Ordering::SeqCst) {
+        FULL_PAGE_STOP.store(true, Ordering::SeqCst);
+        return;
+    }
+    FULL_PAGE_STOP.store(false, Ordering::SeqCst);
+
+    std::thread::spawn(move || {
+        give_focus_back(&app);
+        if !ensure_screen_access() {
+            FULL_PAGE_RUNNING.store(false, Ordering::SeqCst);
+            report_error(&app, SCREEN_HINT);
+            return;
+        }
+        let _ = app.global_shortcut().register(escape_shortcut());
+        let tray = app.tray_by_id("aureen");
+        let result = mac::capture_scrolling(&FULL_PAGE_STOP, |n| {
+            if let Some(tray) = &tray {
+                let _ = tray.set_title(Some(format!("{n}")));
+            }
+        });
+        let _ = app.global_shortcut().unregister(escape_shortcut());
+        if let Some(tray) = &tray {
+            let _ = tray.set_title(None::<&str>);
+        }
+        FULL_PAGE_RUNNING.store(false, Ordering::SeqCst);
+
+        match result.and_then(|frames| stitch::to_jpeg_data_url(&frames)) {
+            Ok(data_url) => {
+                show_panel(&app);
+                let _ = app.emit("fullpage-ready", data_url);
+            }
+            Err(message) => report_error(&app, message),
         }
     });
 }
@@ -188,31 +284,108 @@ fn start_capture(app: AppHandle) {
     start_capture_flow(app);
 }
 
+#[tauri::command]
+fn start_selection(app: AppHandle) {
+    start_selection_flow(app);
+}
+
+#[tauri::command]
+fn start_full_page(app: AppHandle) {
+    start_full_page_flow(app);
+}
+
+#[tauri::command]
+fn hide_panel(app: AppHandle) {
+    hide_panel_window(&app);
+}
+
+/// Opens a web link from the panel in the default browser.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("only http(s) links can be opened".into());
+    }
+    Command::new("/usr/bin/open")
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+fn selection_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Digit1)
+}
+
+fn region_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Digit2)
+}
+
+fn full_page_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Digit9)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Digit2);
-
     tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, pressed, event| {
-                    if *pressed == shortcut && event.state == ShortcutState::Pressed {
+                    if event.state != ShortcutState::Pressed {
+                        return;
+                    }
+                    if *pressed == selection_shortcut() {
+                        start_selection_flow(app.clone());
+                    } else if *pressed == region_shortcut() {
                         start_capture_flow(app.clone());
+                    } else if *pressed == full_page_shortcut() {
+                        start_full_page_flow(app.clone());
+                    } else if *pressed == escape_shortcut() {
+                        FULL_PAGE_STOP.store(true, Ordering::SeqCst);
                     }
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![start_capture, save_download])
+        .invoke_handler(tauri::generate_handler![
+            start_capture,
+            start_selection,
+            start_full_page,
+            hide_panel,
+            open_url,
+            save_download
+        ])
         .setup(move |app| {
             // Menu bar only: no Dock icon, no app switcher entry.
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            app.global_shortcut().register(shortcut)?;
+            for shortcut in [
+                selection_shortcut(),
+                region_shortcut(),
+                full_page_shortcut(),
+            ] {
+                if let Err(e) = app.global_shortcut().register(shortcut) {
+                    eprintln!("Aureen: could not register shortcut {shortcut:?}: {e}");
+                }
+            }
 
-            let capture_item = MenuItem::with_id(app, "capture", "截圖  ⌘⇧2", true, None::<&str>)?;
+            let selection_item =
+                MenuItem::with_id(app, "selection", "儲存選取文字  ⌘⇧1", true, None::<&str>)?;
+            let capture_item =
+                MenuItem::with_id(app, "capture", "截取區域  ⌘⇧2", true, None::<&str>)?;
+            let full_page_item =
+                MenuItem::with_id(app, "full_page", "整頁截圖  ⌘⇧9", true, None::<&str>)?;
+            let separator = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "結束 Aureen", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&capture_item, &quit_item])?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &selection_item,
+                    &capture_item,
+                    &full_page_item,
+                    &separator,
+                    &quit_item,
+                ],
+            )?;
 
             TrayIconBuilder::with_id("aureen")
                 .icon(Image::from_bytes(include_bytes!("../icons/tray.png"))?)
@@ -221,7 +394,9 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
+                    "selection" => start_selection_flow(app.clone()),
                     "capture" => start_capture_flow(app.clone()),
+                    "full_page" => start_full_page_flow(app.clone()),
                     "quit" => app.exit(0),
                     _ => {}
                 })
