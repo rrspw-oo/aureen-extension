@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getRelativeTime } from '@/lib/date';
+import { downloadDataUrl } from '@/lib/download';
 import { saveCaptureAsPdf } from '@/lib/capture-pdf';
 import type { ImageCapture } from '@/types/image-capture';
 import { LinkedItems, type LinkEntry, type LinkKind } from '@/sidebar/ui/LinkedItems';
@@ -154,10 +155,7 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  const link = document.createElement('a');
-                  link.href = capture.imageData;
-                  link.download = `aureen-capture-${capture.createdAt}.jpg`;
-                  link.click();
+                  downloadDataUrl(capture.imageData, `aureen-capture-${capture.createdAt}.jpg`);
                 }}
                 className="p-1.5 bg-white rounded-full hover:bg-gray-100 transition-colors"
                 title={t('common.download')}
@@ -260,10 +258,7 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  const link = document.createElement('a');
-                  link.href = capture.imageData;
-                  link.download = `aureen-capture-${capture.createdAt}.jpg`;
-                  link.click();
+                  downloadDataUrl(capture.imageData, `aureen-capture-${capture.createdAt}.jpg`);
                 }}
                 className="p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors"
                 title={t('common.download')}

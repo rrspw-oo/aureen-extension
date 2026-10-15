@@ -24,10 +24,13 @@ First launch: macOS asks for **Screen Recording** permission for the terminal (d
 ## How it works
 
 - `src-tauri/src/lib.rs` – tray icon (template image), popover placement, global shortcut, and `screencapture -i -x` for the region picker.
-- `src/` – React panel. Reuses `../src/lib/price.ts` and the Tesseract assets in `../public/tesseract` (same OCR as the extension).
+- `src/chrome-shim.ts` – a tiny `chrome.storage` / `chrome.runtime` replacement (IndexedDB-backed), so the extension's own captures UI (`../src/sidebar/captures`, tags, compare, handbook export) runs unchanged in the desktop panel.
+- `src/native-save.ts` + `save_download` (Rust) – exports (PDF / JSON / Markdown / images) are written to `~/Downloads` and revealed in Finder, because WKWebView ignores `<a download>`.
+- OCR is the extension's Tesseract setup (`../public/tesseract`).
 
 ## Not done yet
 
 - Native Vision OCR (faster, better zh-TW) instead of Tesseract.js.
-- Persistence, tags, compare view, PDF export (needs `chrome.storage` abstracted out of `src/lib`).
+- Highlights tab (needs a web page DOM; stays in the extension).
+- Storage meter still shows the extension's 10 MB quota text.
 - Free-tier limits and license key activation.

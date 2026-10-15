@@ -5,6 +5,7 @@ import { TagInput, withPendingTag } from '@/sidebar/ui/TagInput';
 import { LinkPicker } from '@/sidebar/ui/LinkPicker';
 import { TrimImageModal } from '@/sidebar/captures/TrimImageModal';
 import { saveCaptureAsPdf } from '@/lib/capture-pdf';
+import { downloadDataUrl } from '@/lib/download';
 import { extractPrice, parsePriceInput } from '@/lib/price';
 import type { Highlight } from '@/types/highlight';
 import type { CapturePrice, ImageCapture } from '@/types/image-capture';
@@ -131,10 +132,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
             <button
               type="button"
               onClick={() => {
-                const link = document.createElement('a');
-                link.href = currentImage;
-                link.download = `aureen-capture-${Date.now()}.jpg`;
-                link.click();
+                downloadDataUrl(currentImage, `aureen-capture-${Date.now()}.jpg`);
               }}
               className="h-8 px-3 rounded-lg bg-white border border-[#E2D8C4] hover:bg-[#F4F1EA] text-xs font-medium text-[#5E5A4E]"
             >

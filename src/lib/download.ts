@@ -15,6 +15,14 @@ export function downloadFile(
   mimeType = 'text/plain'
 ): void {
   const blob = data instanceof Blob ? data : new Blob([data], { type: mimeType });
+
+  // The desktop (Tauri) shell can't use <a download>; it installs a native saver instead.
+  const nativeSave = (globalThis as { __aureenSaveFile?: (blob: Blob, filename: string) => void }).__aureenSaveFile;
+  if (nativeSave) {
+    nativeSave(blob, filename);
+    return;
+  }
+
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement('a');
@@ -27,6 +35,15 @@ export function downloadFile(
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Download an image given as a data URL (e.g. a stored screenshot)
+ */
+export function downloadDataUrl(dataUrl: string, filename: string): void {
+  void fetch(dataUrl)
+    .then((response) => response.blob())
+    .then((blob) => downloadFile(blob, filename, blob.type));
 }
 
 /**

@@ -58,9 +58,14 @@ fn capture_region() -> Result<Option<String>, String> {
 }
 
 fn place_panel_under(app: &AppHandle, tray_pos: PhysicalPosition<f64>, tray_size: (f64, f64)) {
-    let Some(panel) = app.get_webview_window(PANEL_LABEL) else { return };
+    let Some(panel) = app.get_webview_window(PANEL_LABEL) else {
+        return;
+    };
     let scale = panel.scale_factor().unwrap_or(1.0);
-    let width = panel.outer_size().map(|s| s.width as f64).unwrap_or(420.0 * scale);
+    let width = panel
+        .outer_size()
+        .map(|s| s.width as f64)
+        .unwrap_or(420.0 * scale);
     let mut x = tray_pos.x + tray_size.0 / 2.0 - width / 2.0;
     let y = tray_pos.y + tray_size.1 + 4.0 * scale;
 
@@ -117,6 +122,67 @@ fn start_capture_flow(app: AppHandle) {
     });
 }
 
+fn percent_decode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(v) = u8::from_str_radix(&input[i + 1..i + 3], 16) {
+                out.push(v);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Saves an export (PDF / JSON / Markdown) into ~/Downloads and reveals it in Finder.
+/// The file bytes arrive as the raw request body; the name comes in the `x-filename` header.
+#[tauri::command]
+fn save_download(request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("expected raw file bytes".into());
+    };
+    let name = request
+        .headers()
+        .get("x-filename")
+        .and_then(|v| v.to_str().ok())
+        .map(percent_decode)
+        .unwrap_or_else(|| "aureen-export".into());
+    let name: String = name
+        .chars()
+        .map(|c| {
+            if matches!(c, '/' | '\\' | ':' | '\0') {
+                '-'
+            } else {
+                c
+            }
+        })
+        .collect();
+
+    let home = std::env::var("HOME").map_err(|e| e.to_string())?;
+    let dir = std::path::PathBuf::from(home).join("Downloads");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() => (s.to_string(), format!(".{e}")),
+        _ => (name.clone(), String::new()),
+    };
+    let mut path = dir.join(&name);
+    let mut n = 1;
+    while path.exists() {
+        path = dir.join(format!("{stem} ({n}){ext}"));
+        n += 1;
+    }
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    let _ = Command::new("/usr/bin/open").arg("-R").arg(&path).spawn();
+    Ok(path.to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 fn start_capture(app: AppHandle) {
     start_capture_flow(app);
@@ -136,7 +202,7 @@ pub fn run() {
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![start_capture])
+        .invoke_handler(tauri::generate_handler![start_capture, save_download])
         .setup(move |app| {
             // Menu bar only: no Dock icon, no app switcher entry.
             #[cfg(target_os = "macos")]
@@ -144,8 +210,7 @@ pub fn run() {
 
             app.global_shortcut().register(shortcut)?;
 
-            let capture_item =
-                MenuItem::with_id(app, "capture", "截圖  ⌘⇧2", true, None::<&str>)?;
+            let capture_item = MenuItem::with_id(app, "capture", "截圖  ⌘⇧2", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "結束 Aureen", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&capture_item, &quit_item])?;
 
