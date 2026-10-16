@@ -209,9 +209,11 @@ interface SidebarAppProps {
   moreMenuItems?: { label: string; onClick: () => void; danger?: boolean }[];
   // Render the close button as a bare ✕ icon.
   closeIconOnly?: boolean;
+  // Small non-interactive line at the bottom of the "more" menu (e.g. the build version).
+  moreMenuNote?: string;
 }
 
-export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, toolbar, titleBadge, moreMenuItems, closeIconOnly }) => {
+export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, toolbar, titleBadge, moreMenuItems, closeIconOnly, moreMenuNote }) => {
   const { t } = useTranslation();
   const [language, setLanguage] = useState<LanguageSetting>('auto');
   const [data, setData] = useState<Record<string, unknown>>({});
@@ -390,6 +392,7 @@ export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, to
                 {moreMenuItems?.filter((item) => item.danger).map((item) => (
                   <MenuAction key={item.label} label={item.label} onClick={() => runMenu(item.onClick)} danger />
                 ))}
+                {moreMenuNote && <div className="px-3.5 pt-1.5 pb-1 text-[11px] text-[#9A968A]">{moreMenuNote}</div>}
               </>
             )}
           </div>

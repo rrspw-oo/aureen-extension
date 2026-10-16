@@ -91,6 +91,16 @@ fn enable_manual_accessibility(app: &CFType, pid: i32) {
     }
 }
 
+/// Pid of the app that currently has focus (cheap: one Accessibility call).
+pub fn frontmost_pid() -> Option<i32> {
+    unsafe {
+        let system = CFType::wrap_under_create_rule(AXUIElementCreateSystemWide() as CFTypeRef);
+        let app = copy_attr(system.as_CFTypeRef(), "AXFocusedApplication")?;
+        let mut pid = 0;
+        (AXUIElementGetPid(app.as_CFTypeRef(), &mut pid) == 0 && pid > 0).then_some(pid)
+    }
+}
+
 /// The focused app's name and its selected text (empty when it exposes none).
 fn focused_selection() -> Option<(String, String)> {
     unsafe {

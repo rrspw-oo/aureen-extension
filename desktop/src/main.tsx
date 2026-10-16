@@ -7,11 +7,12 @@ import '@/index.css';
 import { DesktopApp } from './DesktopApp';
 import { SelectionToolbar } from './SelectionToolbar';
 import { FullPageBar } from './FullPageBar';
+import { FloatingButton } from './FloatingButton';
 
-// One bundle, three windows: the menu bar panel, the selection toolbar (#toolbar) and the
-// full-page capture bar (#fullbar).
+// One bundle, four windows: the menu bar panel, the selection toolbar (#toolbar), the
+// full-page capture bar (#fullbar) and the floating button (#fab).
 const view = window.location.hash.slice(1);
-const isToolbar = view === 'toolbar' || view === 'fullbar';
+const isToolbar = view === 'toolbar' || view === 'fullbar' || view === 'fab';
 if (!isToolbar) {
   const style = document.createElement('style');
   style.textContent = 'header { cursor: grab; } header button, header [role="menu"] { cursor: pointer; }';
@@ -24,6 +25,14 @@ if (isToolbar) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {view === 'toolbar' ? <SelectionToolbar /> : view === 'fullbar' ? <FullPageBar /> : <DesktopApp />}
+    {view === 'toolbar' ? (
+      <SelectionToolbar />
+    ) : view === 'fullbar' ? (
+      <FullPageBar />
+    ) : view === 'fab' ? (
+      <FloatingButton />
+    ) : (
+      <DesktopApp />
+    )}
   </React.StrictMode>
 );

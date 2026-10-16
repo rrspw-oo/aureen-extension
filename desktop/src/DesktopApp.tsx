@@ -3,7 +3,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SidebarApp } from '@/sidebar/shell';
-import { confirmAction } from '@/lib/dialogs';
 import { DialogHost } from './DialogHost';
 
 interface CapturePayload {
@@ -20,11 +19,6 @@ interface HighlightPayload {
   focusNote?: boolean;
 }
 
-const ACTIONS = [
-  { command: 'start_selection', label: '儲存選取文字', keys: '⌘⇧1' },
-  { command: 'start_capture', label: '截取區域', keys: '⌘⇧2' },
-  { command: 'start_full_page', label: '整頁截圖', keys: '⌘⇧9' }
-] as const;
 
 /**
  * The menu bar panel: the extension's own sidebar (highlights, captures, export, settings),
@@ -106,35 +100,13 @@ export function DesktopApp() {
     };
   }, []);
 
-  const quit = (): void => {
-    void confirmAction('要結束 Aureen 嗎?選單列圖示會消失,快捷鍵也會停止。', {
-      danger: true,
-      confirmLabel: '結束'
-    }).then((ok) => ok && invoke('quit_app'));
-  };
-
-  const toolbar = (
+  const toolbar = error ? (
     <div className="px-4 pt-3 flex-shrink-0">
-      <div className={`grid grid-cols-3 gap-1.5 ${paused ? 'opacity-60' : ''}`}>
-        {ACTIONS.map((action) => (
-          <button
-            key={action.command}
-            type="button"
-            onClick={() => void invoke(action.command)}
-            className="h-12 rounded-lg border border-[#E2D8C4] bg-white hover:bg-[#FBF5EA] flex flex-col items-center justify-center leading-tight"
-          >
-            <span className="text-[12px] font-semibold text-[#5E4A22]">{action.label}</span>
-            <span className="text-[10px] text-[#9A8F78]">{action.keys}</span>
-          </button>
-        ))}
-      </div>
-      {error && (
-        <p className="mt-2 rounded-lg bg-[#FBEDE8] px-3 py-2 text-xs text-[#9A3A24]" role="alert">
-          {error}
-        </p>
-      )}
+      <p className="m-0 rounded-lg bg-[#FBEDE8] px-3 py-2 text-xs text-[#9A3A24]" role="alert">
+        {error}
+      </p>
     </div>
-  );
+  ) : null;
 
   // Paused: shortcuts and the selection toolbar are off; the badge resumes in one click.
   const titleBadge = paused ? (
@@ -152,8 +124,7 @@ export function DesktopApp() {
     paused
       ? { label: '啟用 Aureen', onClick: () => void invoke('set_paused', { paused: false }) }
       : { label: '暫停 Aureen(停用快捷鍵與選字工具列)', onClick: () => void invoke('set_paused', { paused: true }) },
-    { label: '面板回到圖示下方', onClick: () => void invoke('dock_panel') },
-    { label: '結束 Aureen', onClick: quit, danger: true }
+    { label: '面板回到選單列圖示下方', onClick: () => void invoke('dock_panel') }
   ];
 
   return (
@@ -165,6 +136,7 @@ export function DesktopApp() {
         titleBadge={titleBadge}
         moreMenuItems={moreMenuItems}
         closeIconOnly
+        moreMenuNote={`Aureen ${__AUREEN_BUILD__}`}
       />
       <DialogHost />
     </div>

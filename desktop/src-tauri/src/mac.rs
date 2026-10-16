@@ -190,6 +190,10 @@ pub fn grab_selection() -> Result<Selection, String> {
 
 /// Unix pid of the frontmost app.
 pub fn frontmost_pid() -> Option<i32> {
+    #[cfg(target_os = "macos")]
+    if let Some(pid) = crate::selection_watch::frontmost_pid() {
+        return Some(pid);
+    }
     osascript(r#"tell application "System Events" to get unix id of first application process whose frontmost is true"#)
         .ok()
         .and_then(|v| v.trim().parse().ok())

@@ -58,6 +58,23 @@
         "shadow": false,
         "focus": false,
         "acceptFirstMouse": true
+      },
+      {
+        "label": "fab",
+        "title": "Aureen",
+        "url": "index.html#fab",
+        "width": 64,
+        "height": 64,
+        "visible": false,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "focus": false,
+        "acceptFirstMouse": true,
+        "visibleOnAllWorkspaces": true
       }
     ],
     "security": {
