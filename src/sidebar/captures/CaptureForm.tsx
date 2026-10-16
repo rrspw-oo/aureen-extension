@@ -9,6 +9,8 @@ import { downloadDataUrl } from '@/lib/download';
 import { extractPrice, parsePriceInput } from '@/lib/price';
 import type { Highlight } from '@/types/highlight';
 import type { CapturePrice, ImageCapture } from '@/types/image-capture';
+import { notify } from '@/lib/dialogs';
+import { sourceHost } from '@/lib/url';
 
 export interface CaptureFormFields {
   title: string;
@@ -32,14 +34,6 @@ interface CaptureFormProps {
   captures: ImageCapture[];
   onSave: (fields: CaptureFormFields) => void;
   onCancel: () => void;
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
 }
 
 export const CaptureForm: React.FC<CaptureFormProps> = ({
@@ -94,7 +88,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
   return (
     <Sheet
       title={isEdit ? t('form.editScreenshot') : t('form.newScreenshot')}
-      subtitle={hostOf(pageUrl)}
+      subtitle={sourceHost(pageUrl)}
       onClose={onCancel}
       footer={
         <>
@@ -141,7 +135,7 @@ export const CaptureForm: React.FC<CaptureFormProps> = ({
             <button
               type="button"
               onClick={() => {
-                saveCaptureAsPdf(currentImage, title.trim() || undefined).catch(() => alert(t('common.pdfFailed')));
+                saveCaptureAsPdf(currentImage, title.trim() || undefined).catch(() => notify(t('common.pdfFailed')));
               }}
               className="h-8 px-3 rounded-lg bg-white border border-[#E2D8C4] hover:bg-[#F4F1EA] text-xs font-medium text-[#5E5A4E]"
             >

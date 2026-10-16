@@ -6,6 +6,7 @@ import type { Highlight, Tag } from '@/types/highlight';
 import { imageCaptureStorage } from '@/lib/capture-store';
 import { storageService } from '@/lib/highlight-store';
 import { downloadFile, generateFilenameWithDate } from '@/lib/download';
+import { sourceHost } from '@/lib/url';
 
 const PAGE_WIDTH_PX = 794;
 const PAGE_HEIGHT_PX = 1123;
@@ -136,6 +137,7 @@ function tagChips(tags: string[], tagColors: Map<string, string>): string {
 
 function sourceLabel(url: string): string {
   if (!url) return '';
+  if (!/^https?:/.test(url)) return sourceHost(url);
   return url.replace(/^https?:\/\//, '').split(/[?#]/)[0].slice(0, 80);
 }
 

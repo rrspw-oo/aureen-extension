@@ -3,6 +3,14 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { SidebarApp } from '@/sidebar/shell';
+import { confirmAction } from '@/lib/dialogs';
+import { DialogHost } from './DialogHost';
+
+interface CapturePayload {
+  imageData: string;
+  url: string;
+  pageTitle: string;
+}
 
 interface HighlightPayload {
   text: string;
@@ -32,12 +40,21 @@ export function DesktopApp() {
       setError(null);
       bus.dispatchEvent(new CustomEvent('sidebar-data', { detail }));
     };
-    const capture = (imageData: string, fullPage: boolean): void =>
-      send({ mode: 'capture', imageData, fullPage, url: 'aureen://screenshot', timestamp: Date.now(), captureId: `capture_${Date.now()}` });
+    const capture = ({ imageData, url, pageTitle }: CapturePayload, fullPage: boolean): void =>
+      send({
+        mode: 'capture',
+        imageData,
+        fullPage,
+        // Browser tab or app the capture came from; a bare screenshot when unknown.
+        url: url || 'aureen://screenshot',
+        pageTitle,
+        timestamp: Date.now(),
+        captureId: `capture_${Date.now()}`
+      });
 
     const subscriptions = [
-      listen<string>('capture-ready', (e) => capture(e.payload, false)),
-      listen<string>('fullpage-ready', (e) => capture(e.payload, true)),
+      listen<CapturePayload>('capture-ready', (e) => capture(e.payload, false)),
+      listen<CapturePayload>('fullpage-ready', (e) => capture(e.payload, true)),
       listen<HighlightPayload>('highlight-ready', (e) =>
         send({
           mode: 'highlight',
@@ -90,7 +107,10 @@ export function DesktopApp() {
   }, []);
 
   const quit = (): void => {
-    if (confirm('要結束 Aureen 嗎?選單列圖示會消失,快捷鍵也會停止。')) void invoke('quit_app');
+    void confirmAction('要結束 Aureen 嗎?選單列圖示會消失,快捷鍵也會停止。', {
+      danger: true,
+      confirmLabel: '結束'
+    }).then((ok) => ok && invoke('quit_app'));
   };
 
   const toolbar = (
@@ -146,6 +166,7 @@ export function DesktopApp() {
         moreMenuItems={moreMenuItems}
         closeIconOnly
       />
+      <DialogHost />
     </div>
   );
 }

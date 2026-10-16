@@ -19,7 +19,8 @@
     "view": "檢視",
     "discard": "捨棄",
     "discardTitle": "捨棄（Esc）",
-    "toSave": "儲存"
+    "toSave": "儲存",
+    "ok": "好"
   },
   "time": {
     "justNow": "剛剛",
@@ -164,7 +165,8 @@
   "storage": {
     "label": "儲存空間",
     "used": "已用 {{used}} / 10 MB",
-    "title": "已使用 {{used}} / {{quota}}"
+    "title": "已使用 {{used}} / {{quota}}",
+    "usedOnly": "已用 {{used}}"
   },
   "exportDialog": {
     "titleHighlights": "匯出重點",

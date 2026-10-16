@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LinkedItems, type LinkEntry, type LinkKind } from '@/sidebar/ui/LinkedItems';
 import { getRelativeTime } from '@/lib/date';
 import type { Highlight, HighlightColor } from '@/types/highlight';
+import { confirmAction } from '@/lib/dialogs';
 
 const MARK_TINT: Record<HighlightColor, { bg: string; line: string }> = {
   yellow: { bg: '#F5E6BF', line: '#D9BC7E' },
@@ -48,7 +49,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
   }, [focused]);
 
   const handleDelete = (): void => {
-    if (onDelete && confirm(t('highlights.confirmDelete'))) onDelete(highlight.id);
+    if (onDelete) void confirmAction(t('highlights.confirmDelete'), { danger: true }).then((ok) => ok && onDelete(highlight.id));
   };
 
   return (

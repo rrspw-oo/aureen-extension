@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { HighlightCard } from '@/sidebar/highlights/HighlightCard';
 import type { Highlight } from '@/types/highlight';
 import type { LinkEntry, LinkKind } from '@/sidebar/ui/LinkedItems';
+import { sourceHost } from '@/lib/url';
 
 export interface HighlightGroup {
   key: string;
@@ -21,20 +22,12 @@ interface HighlightListProps {
   focusedId: string | null;
 }
 
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
-}
-
 export const HighlightList: React.FC<HighlightListProps> = ({ groups, onEdit, onDelete, getLinks, onNavigate, focusedId }) => {
   const { t } = useTranslation();
   return (
   <div className="flex flex-col gap-4">
     {groups.map((group) => {
-      const host = hostOf(group.url);
+      const host = sourceHost(group.url);
       return (
         <section key={group.key} className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2 px-0.5">

@@ -195,6 +195,15 @@ pub fn frontmost_pid() -> Option<i32> {
         .and_then(|v| v.trim().parse().ok())
 }
 
+/// Name of the app process with `pid`.
+pub fn app_name_of(pid: i32) -> Option<String> {
+    osascript(&format!(
+        r#"tell application "System Events" to get name of first application process whose unix id is {pid}"#
+    ))
+    .ok()
+    .filter(|s| !s.is_empty())
+}
+
 /// Brings the app with `pid` to the front (so keystrokes such as Page Down reach it).
 pub fn activate_pid(pid: i32) {
     let _ = osascript(&format!(

@@ -11,6 +11,8 @@ import { saveCaptureAsPdf } from '@/lib/capture-pdf';
 import type { ImageCapture } from '@/types/image-capture';
 import { LinkedItems, type LinkEntry, type LinkKind } from '@/sidebar/ui/LinkedItems';
 import { COLORS } from '@/sidebar/ui/theme';
+import { notify } from '@/lib/dialogs';
+import { sourceHost } from '@/lib/url';
 
 interface CaptureCardProps {
   capture: ImageCapture;
@@ -62,15 +64,6 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // Extract domain from URL
-  const getDomain = (url: string): string => {
-    try {
-      const urlObj = new URL(url);
-      return urlObj.hostname.replace('www.', '');
-    } catch {
-      return url;
-    }
-  };
 
   return (
     <>
@@ -167,7 +160,7 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  saveCaptureAsPdf(capture.imageData, capture.title).catch(() => alert(t('common.pdfFailed')));
+                  saveCaptureAsPdf(capture.imageData, capture.title).catch(() => notify(t('common.pdfFailed')));
                 }}
                 className="p-1.5 bg-white rounded-full hover:bg-gray-100 transition-colors"
                 title={t('common.savePdf')}
@@ -230,7 +223,7 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
 
           {/* Meta */}
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span className="truncate flex-1">{getDomain(capture.url)}</span>
+            <span className="truncate flex-1">{sourceHost(capture.url)}</span>
             <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
               {links.length > 0 && (
                 <span className="flex items-center gap-0.5 text-[#C9A86C]" title={t('link.linkedTitle')}>
@@ -271,7 +264,7 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  saveCaptureAsPdf(capture.imageData, capture.title).catch(() => alert(t('common.pdfFailed')));
+                  saveCaptureAsPdf(capture.imageData, capture.title).catch(() => notify(t('common.pdfFailed')));
                 }}
                 className="p-2 bg-black/70 hover:bg-black/90 ring-1 ring-white/30 rounded-full transition-colors"
                 title={t('common.savePdf')}
@@ -297,7 +290,13 @@ export const CaptureCard: React.FC<CaptureCardProps> = ({
             <div className="mt-4 p-4 bg-black bg-opacity-50 rounded-lg text-white">
               {capture.title && <p className="text-sm font-semibold mb-1">{capture.title}</p>}
               <p className="text-sm mb-1">{capture.note || t('captures.noNote')}</p>
-              <p className="text-xs text-gray-300">{capture.url}</p>
+              {/^https?:/.test(capture.url) ? (
+                <a href={capture.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block text-xs text-gray-300 underline break-all hover:text-white">
+                  {capture.url}
+                </a>
+              ) : (
+                sourceHost(capture.url) && <p className="text-xs text-gray-300">{sourceHost(capture.url)}</p>
+              )}
               {links.length > 0 && onNavigate && (
                 <div className="mt-3 pt-3 border-t border-white border-opacity-20" onClick={(e) => e.stopPropagation()}>
                   <LinkedItems

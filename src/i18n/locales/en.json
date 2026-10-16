@@ -19,7 +19,8 @@
     "view": "View",
     "discard": "Discard",
     "discardTitle": "Discard (Esc)",
-    "toSave": "to save"
+    "toSave": "to save",
+    "ok": "OK"
   },
   "time": {
     "justNow": "just now",
@@ -172,7 +173,8 @@
   "storage": {
     "label": "Storage",
     "used": "{{used}} of 10 MB",
-    "title": "{{used}} of {{quota}} used"
+    "title": "{{used}} of {{quota}} used",
+    "usedOnly": "{{used}} used"
   },
   "exportDialog": {
     "titleHighlights": "Export Highlights",

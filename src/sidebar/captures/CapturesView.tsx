@@ -14,6 +14,7 @@ import { TagChipRow } from '@/sidebar/ui/TagChipRow';
 import { StorageMeter } from '@/sidebar/ui/StorageMeter';
 import { resolveLinks, type LinkKind } from '@/sidebar/ui/LinkedItems';
 import { resetCaptureData } from '@/sidebar/shell';
+import { confirmAction, notify } from '@/lib/dialogs';
 
 interface CapturesViewProps {
   initialData?: Record<string, unknown>;
@@ -118,7 +119,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
   };
 
   const handleDelete = async (captureId: string): Promise<void> => {
-    if (!confirm(t('captures.confirmDelete'))) return;
+    if (!(await confirmAction(t('captures.confirmDelete'), { danger: true }))) return;
     await imageCaptureStorage.deleteCapture(captureId);
   };
 
@@ -155,7 +156,7 @@ export const CapturesView: React.FC<CapturesViewProps> = ({ initialData, focusCa
       closeSheet();
     } catch (error) {
       console.error('Failed to save capture:', error);
-      alert(t('captures.saveFailed'));
+      notify(t('captures.saveFailed'));
     }
   };
 

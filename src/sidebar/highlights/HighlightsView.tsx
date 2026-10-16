@@ -12,6 +12,7 @@ import { normalizePageUrl } from '@/lib/url';
 import { resetCaptureData } from '@/sidebar/shell';
 import type { Highlight, HighlightColor, HighlightPosition } from '@/types/highlight';
 import type { ImageCapture } from '@/types/image-capture';
+import { notify } from '@/lib/dialogs';
 
 interface HighlightsViewProps {
   initialData?: Record<string, unknown>;
@@ -194,7 +195,7 @@ export const HighlightsView: React.FC<HighlightsViewProps> = ({ initialData, foc
       closeSheet();
     } catch (error) {
       console.error('Error saving highlight:', error);
-      alert(t('highlights.saveFailed'));
+      notify(t('highlights.saveFailed'));
     }
   };
 

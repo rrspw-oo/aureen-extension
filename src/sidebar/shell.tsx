@@ -18,6 +18,7 @@ import { imageCaptureStorage } from '@/lib/capture-store';
 import { ExportHandbookDialog } from '@/sidebar/ExportHandbookDialog';
 import type { LinkKind } from '@/sidebar/ui/LinkedItems';
 import type { LanguageSetting } from '@/types/highlight';
+import { confirmAction } from '@/lib/dialogs';
 
 type TabType = 'highlights' | 'images';
 
@@ -300,9 +301,9 @@ export const SidebarApp: React.FC<SidebarAppProps> = ({ eventTarget, onClose, to
   };
 
   const handleClearAll = async (): Promise<void> => {
-    const confirmed = confirm(t('shell.confirmDeleteAll'));
+    const confirmed = await confirmAction(t('shell.confirmDeleteAll'), { danger: true });
     if (!confirmed) return;
-    const confirmed2 = confirm(t('shell.confirmDeleteAll2'));
+    const confirmed2 = await confirmAction(t('shell.confirmDeleteAll2'), { danger: true });
     if (!confirmed2) return;
     await storageService.clearHighlights();
   };

@@ -5,6 +5,7 @@ import { TagInput, withPendingTag } from '@/sidebar/ui/TagInput';
 import { LinkPicker } from '@/sidebar/ui/LinkPicker';
 import type { Highlight } from '@/types/highlight';
 import type { ImageCapture } from '@/types/image-capture';
+import { sourceHost } from '@/lib/url';
 
 export interface HighlightFormFields {
   title: string;
@@ -26,14 +27,6 @@ interface HighlightFormProps {
   captures: ImageCapture[];
   onSave: (fields: HighlightFormFields) => void;
   onCancel: () => void;
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
 }
 
 export const HighlightForm: React.FC<HighlightFormProps> = ({
@@ -66,7 +59,7 @@ export const HighlightForm: React.FC<HighlightFormProps> = ({
   return (
     <Sheet
       title={isEdit ? t('form.editHighlight') : t('form.newHighlight')}
-      subtitle={hostOf(pageUrl)}
+      subtitle={sourceHost(pageUrl)}
       onClose={onCancel}
       footer={
         <>

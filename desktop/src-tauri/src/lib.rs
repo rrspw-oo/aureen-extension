@@ -146,6 +146,35 @@ fn report_error(app: &AppHandle, message: impl Into<String>) {
 
 const SCREEN_HINT: &str = "需要「螢幕錄製」權限:系統設定 → 隱私權與安全性 → 螢幕與系統錄音,開啟後完全結束並重開 App(開發時是你用的終端機)。";
 
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CapturePayload {
+    image_data: String,
+    /// Browser tab URL, `aureen-app://<App>` for other apps, empty when unknown.
+    url: String,
+    page_title: String,
+}
+
+/// Where a capture comes from: the frontmost app (or, when that is Aureen's own panel,
+/// the app the user was in before opening it).
+fn current_source() -> (String, String) {
+    let own = std::process::id() as i32;
+    let pid = match mac::frontmost_pid() {
+        Some(pid) if pid != own => pid,
+        _ => LAST_EXTERNAL_PID.load(Ordering::SeqCst),
+    };
+    source_of_pid(pid)
+}
+
+fn source_of_pid(pid: i32) -> (String, String) {
+    if pid <= 0 {
+        return (String::new(), String::new());
+    }
+    mac::app_name_of(pid)
+        .map(|name| mac::source_of(&name))
+        .unwrap_or_default()
+}
+
 fn start_capture_flow(app: AppHandle) {
     // The picker blocks until the user finishes, so keep it off the event loop thread.
     std::thread::spawn(move || {
@@ -154,10 +183,18 @@ fn start_capture_flow(app: AppHandle) {
             report_error(&app, SCREEN_HINT);
             return;
         }
+        let (url, page_title) = current_source();
         match capture_region() {
-            Ok(Some(data_url)) => {
+            Ok(Some(image_data)) => {
                 show_panel(&app);
-                let _ = app.emit("capture-ready", data_url);
+                let _ = app.emit(
+                    "capture-ready",
+                    CapturePayload {
+                        image_data,
+                        url,
+                        page_title,
+                    },
+                );
             }
             Ok(None) => {}
             Err(message) => report_error(&app, message),
@@ -459,6 +496,7 @@ fn run_full_page(app: AppHandle, to_here: bool) {
     };
     set_fullbar_state(&app, "running", 0);
 
+    let (url, page_title) = source_of_pid(target.pid);
     // "Capture to here": remember the view the user scrolled to before going back to the top.
     let end = if to_here {
         mac::capture_target(&target).ok()
@@ -476,7 +514,14 @@ fn run_full_page(app: AppHandle, to_here: bool) {
     match result.and_then(|frames| stitch::to_jpeg_data_url(&frames)) {
         Ok(data_url) => {
             show_panel(&app);
-            let _ = app.emit("fullpage-ready", data_url);
+            let _ = app.emit(
+                "fullpage-ready",
+                CapturePayload {
+                    image_data: data_url,
+                    url,
+                    page_title,
+                },
+            );
         }
         Err(message) => report_error(&app, message),
     }

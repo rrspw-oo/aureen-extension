@@ -4,6 +4,7 @@ import { imageCaptureStorage } from '@/lib/capture-store';
 import { parsePriceInput } from '@/lib/price';
 import type { Highlight } from '@/types/highlight';
 import type { ImageCapture } from '@/types/image-capture';
+import { sourceHost } from '@/lib/url';
 
 interface CompareViewProps {
   tags: string[];
@@ -12,14 +13,6 @@ interface CompareViewProps {
   ocrRunningIds: string[];
   onBack: () => void;
   onRecognize: (capture: ImageCapture) => void;
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
 }
 
 export const CompareView: React.FC<CompareViewProps> = ({ tags, captures, highlights, ocrRunningIds, onBack, onRecognize }) => {
@@ -154,7 +147,7 @@ export const CompareView: React.FC<CompareViewProps> = ({ tags, captures, highli
                     </button>
                   )}
                 </div>
-                <div className="text-[11px] text-[#6B6878] truncate">{hostOf(capture.url)}</div>
+                <div className="text-[11px] text-[#6B6878] truncate">{sourceHost(capture.url)}</div>
                 {capture.note && <div className="text-xs leading-snug text-[#5E5A4E] line-clamp-2">{capture.note}</div>}
                 <div className="flex items-center gap-2">
                   {isLowest && <span className="h-5 px-1.5 rounded bg-[#E3F1E8] text-[#2F7A4D] text-[11px] font-semibold inline-flex items-center">{t('compare.lowest')}</span>}
@@ -180,7 +173,7 @@ export const CompareView: React.FC<CompareViewProps> = ({ tags, captures, highli
             <div className="text-xs font-semibold text-[#6B6878] px-1">{t('compare.related')}</div>
             {relatedHighlights.map((highlight) => (
               <div key={highlight.id} className="p-3 border border-dashed border-[#D9CDB4] rounded-xl flex flex-col gap-1">
-                <div className="text-[11px] text-[#6B6878] truncate">{hostOf(highlight.url)}</div>
+                <div className="text-[11px] text-[#6B6878] truncate">{sourceHost(highlight.url)}</div>
                 <div className="text-[13px] leading-snug text-[#2E2A22] line-clamp-3">{highlight.text}</div>
               </div>
             ))}
