@@ -1,3 +1,4 @@
+mod ext_detect;
 mod mac;
 #[cfg(target_os = "macos")]
 mod selection_watch;
@@ -901,7 +902,13 @@ pub fn run() {
                         app: source,
                         x,
                         y,
-                    } => show_toolbar(&handle, text, source, x, y),
+                    } => {
+                        // In a browser running the Aureen extension, its own toolbar shows up
+                        // on the page; a second one from the app would be a duplicate.
+                        if !ext_detect::browser_has_extension(&source) {
+                            show_toolbar(&handle, text, source, x, y)
+                        }
+                    }
                     selection_watch::SelectionEvent::MouseDown { x, y } => {
                         dismiss_toolbar_if_outside(&handle, x, y)
                     }
