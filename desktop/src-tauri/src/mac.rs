@@ -301,9 +301,10 @@ pub fn front_target() -> Result<Target, String> {
 }
 
 pub fn capture_target(target: &Target) -> Result<RgbaImage, String> {
-    let path = std::env::temp_dir().join(format!("aureen-frame-{}.png", stamp()));
+    // BMP: no compression, so writing and reading each frame is quick.
+    let path = std::env::temp_dir().join(format!("aureen-frame-{}.bmp", stamp()));
     let mut cmd = Command::new("/usr/sbin/screencapture");
-    cmd.args(["-x", "-t", "png"]);
+    cmd.args(["-x", "-t", "bmp"]);
     match target.window_id {
         Some(id) => cmd.args(["-o", "-l"]).arg(id.to_string()),
         None => {
@@ -320,30 +321,57 @@ pub fn capture_target(target: &Target) -> Result<RgbaImage, String> {
     Ok(img)
 }
 
-fn key_code(code: u32) -> Result<(), String> {
+/// Presses a key in the frontmost app. Posted directly as a keyboard event (no AppleScript
+/// process per press); needs the Accessibility permission.
+#[cfg(target_os = "macos")]
+fn key_code(code: u16) -> Result<(), String> {
+    use core_graphics::event::{CGEvent, CGEventTapLocation};
+    use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
+    for down in [true, false] {
+        let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState)
+            .map_err(|_| ACCESSIBILITY_HINT.to_string())?;
+        let event = CGEvent::new_keyboard_event(source, code, down)
+            .map_err(|_| ACCESSIBILITY_HINT.to_string())?;
+        event.post(CGEventTapLocation::HID);
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn key_code(code: u16) -> Result<(), String> {
     osascript(&format!(
         r#"tell application "System Events" to key code {code}"#
     ))
     .map(|_| ())
 }
 
+const KEY_HOME: u16 = 115;
+const KEY_PAGE_DOWN: u16 = 121;
+
 const MAX_FRAMES: usize = 40;
 
 /// Scrolls the target window from the top with Page Down, capturing it after every step.
-/// Stops when the content stops moving, when `end` (the view the user chose with
-/// "Capture to here") comes within reach, when `stop` is set, or after `MAX_FRAMES`.
+/// With `to_here`, the view on screen now is the end: scrolling stops once it comes within
+/// reach. Also stops when the content stops moving, when `stop` is set, or after `MAX_FRAMES`.
 pub fn capture_scrolling(
     target: &Target,
-    end: Option<RgbaImage>,
+    to_here: bool,
     stop: &AtomicBool,
     on_frame: impl Fn(usize),
 ) -> Result<Vec<RgbaImage>, String> {
     activate_pid(target.pid);
     sleep(Duration::from_millis(250));
-    key_code(115)?; // Home
-    sleep(Duration::from_millis(500));
+    // Taken after the window is active again, so it looks exactly like the frames to come.
+    let end = if to_here {
+        Some(capture_target(target)?)
+    } else {
+        None
+    };
+    key_code(KEY_HOME)?;
+    sleep(Duration::from_millis(400));
 
     let mut frames: Vec<RgbaImage> = Vec::new();
+    let mut bands = (0, 0);
     loop {
         let frame = capture_target(target)?;
         if frames
@@ -352,8 +380,11 @@ pub fn capture_scrolling(
         {
             break; // reached the end of the page
         }
+        if frames.len() == 1 {
+            bands = crate::stitch::fixed_bands(&frames[0], &frame);
+        }
         if let Some(end) = &end {
-            if crate::stitch::continues_into(&frame, end) {
+            if crate::stitch::continues_into(&frame, end, bands) {
                 frames.push(frame);
                 frames.push(end.clone());
                 on_frame(frames.len());
@@ -365,8 +396,9 @@ pub fn capture_scrolling(
         if stop.load(Ordering::SeqCst) || frames.len() >= MAX_FRAMES {
             break;
         }
-        key_code(121)?; // Page Down
-        sleep(Duration::from_millis(450));
+        key_code(KEY_PAGE_DOWN)?;
+        // Long enough for smooth scrolling to settle.
+        sleep(Duration::from_millis(300));
     }
     Ok(frames)
 }

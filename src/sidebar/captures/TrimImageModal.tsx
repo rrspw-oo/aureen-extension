@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 const MIN_FRACTION = 0.01;
 const EDGE_PX = 48;
 const SCROLL_STEP = 24;
+// Large captures (full pages) are shown through a lighter preview so dragging stays smooth;
+// the crop itself is always cut from the original.
+const PREVIEW_MAX_WIDTH = 1000;
+const PREVIEW_MAX_PIXELS = 6_000_000;
 
 interface TrimImageModalProps {
   imageData: string;
@@ -20,9 +24,40 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
   const [left, setLeft] = useState(0);
   const [right, setRight] = useState(1);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const originalRef = useRef<HTMLImageElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragging = useRef<Edge | null>(null);
+  const pendingMove = useRef<{ x: number; y: number } | null>(null);
+  const frame = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const original = new Image();
+    original.onload = () => {
+      if (cancelled) return;
+      originalRef.current = original;
+      const w = original.naturalWidth;
+      const h = original.naturalHeight;
+      setNatural({ w, h });
+      const scale = Math.min(1, PREVIEW_MAX_WIDTH / w, Math.sqrt(PREVIEW_MAX_PIXELS / (w * h)));
+      if (scale >= 1) {
+        setPreviewSrc(imageData);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      canvas.getContext('2d')!.drawImage(original, 0, 0, canvas.width, canvas.height);
+      setPreviewSrc(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    original.src = imageData;
+    return () => {
+      cancelled = true;
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
+  }, [imageData]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -40,23 +75,32 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
     dragging.current = edge;
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+  // Pointer moves are applied at most once per frame.
+  const applyMove = (): void => {
+    frame.current = null;
+    const move = pendingMove.current;
     const edge = dragging.current;
     const img = imgRef.current;
     const scroller = scrollRef.current;
-    if (!edge || !img || !scroller) return;
+    if (!move || !edge || !img || !scroller) return;
 
     const box = scroller.getBoundingClientRect();
-    if (e.clientY > box.bottom - EDGE_PX) scroller.scrollBy(0, SCROLL_STEP);
-    if (e.clientY < box.top + EDGE_PX) scroller.scrollBy(0, -SCROLL_STEP);
+    if (move.y > box.bottom - EDGE_PX) scroller.scrollBy(0, SCROLL_STEP);
+    if (move.y < box.top + EDGE_PX) scroller.scrollBy(0, -SCROLL_STEP);
 
     const rect = img.getBoundingClientRect();
-    const fy = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
-    const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const fy = Math.min(1, Math.max(0, (move.y - rect.top) / rect.height));
+    const fx = Math.min(1, Math.max(0, (move.x - rect.left) / rect.width));
     if (edge === 'top') setTop(Math.min(fy, bottom - MIN_FRACTION));
     else if (edge === 'bottom') setBottom(Math.max(fy, top + MIN_FRACTION));
     else if (edge === 'left') setLeft(Math.min(fx, right - MIN_FRACTION));
     else setRight(Math.max(fx, left + MIN_FRACTION));
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+    if (!dragging.current) return;
+    pendingMove.current = { x: e.clientX, y: e.clientY };
+    if (frame.current === null) frame.current = requestAnimationFrame(applyMove);
   };
 
   const handlePointerUp = (): void => {
@@ -64,7 +108,7 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
   };
 
   const handleApply = (): void => {
-    const img = imgRef.current;
+    const img = originalRef.current;
     if (!img || !natural) return;
     const sx = Math.round(left * natural.w);
     const sy = Math.round(top * natural.h);
@@ -123,11 +167,11 @@ export const TrimImageModal: React.FC<TrimImageModalProps> = ({ imageData, onCan
           <div className="relative select-none" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
             <img
               ref={imgRef}
-              src={imageData}
+              src={previewSrc ?? undefined}
               alt={t('trim.alt')}
               draggable={false}
-              onLoad={(e) => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
               className="block w-full"
+              style={natural && !previewSrc ? { aspectRatio: `${natural.w} / ${natural.h}` } : undefined}
             />
             <div className="absolute left-0 right-0 top-0 bg-black/55 pointer-events-none" style={{ height: `${top * 100}%` }} />
             <div className="absolute left-0 right-0 bottom-0 bg-black/55 pointer-events-none" style={{ height: `${(1 - bottom) * 100}%` }} />

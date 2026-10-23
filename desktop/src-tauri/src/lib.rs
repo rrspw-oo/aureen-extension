@@ -675,13 +675,7 @@ fn run_full_page(app: AppHandle, to_here: bool) {
     set_fullbar_state(&app, "running", 0);
 
     let (url, page_title) = source_of_pid(target.pid);
-    // "Capture to here": remember the view the user scrolled to before going back to the top.
-    let end = if to_here {
-        mac::capture_target(&target).ok()
-    } else {
-        None
-    };
-    let result = mac::capture_scrolling(&target, end, &FULL_PAGE_STOP, |n| {
+    let result = mac::capture_scrolling(&target, to_here, &FULL_PAGE_STOP, |n| {
         set_fullbar_state(&app, "running", n);
     });
     let cancelled = FULL_PAGE_CANCEL.load(Ordering::SeqCst);

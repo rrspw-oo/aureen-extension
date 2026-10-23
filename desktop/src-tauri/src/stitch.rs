@@ -87,19 +87,33 @@ fn find_shift(a: &[(u64, bool)], b: &[(u64, bool)], top: usize, m: usize) -> Opt
     best.map(|(s, _, _)| s)
 }
 
-/// True when `next` shows content that continues `prev` within one screen (they overlap).
-/// Used for "capture to here": the scroll stops once the user's chosen view is in reach.
-pub fn continues_into(prev: &RgbaImage, next: &RgbaImage) -> bool {
+/// Height of the fixed toolbar / footer of a window, learned from two scrolled frames.
+pub fn fixed_bands(a: &RgbaImage, b: &RgbaImage) -> (usize, usize) {
+    if a.dimensions() != b.dimensions() {
+        return (0, 0);
+    }
+    static_bands(&row_signatures(a), &row_signatures(b))
+}
+
+/// True when `next` shows content at or a little below `prev` (within one screen).
+/// Used for "capture to here": scrolling stops once the user's chosen view is in reach.
+/// `bands` are the window's fixed toolbar/footer heights, ignored in the comparison: the
+/// chosen view may have been taken while the window looked different (e.g. inactive).
+pub fn continues_into(prev: &RgbaImage, next: &RgbaImage, bands: (usize, usize)) -> bool {
     if prev.dimensions() != next.dimensions() {
         return false;
     }
     let (a, b) = (row_signatures(prev), row_signatures(next));
-    if a == b {
-        return true;
-    }
-    let (top, bottom) = static_bands(&a, &b);
+    let (st, sb) = static_bands(&a, &b);
+    let (top, bottom) = (st.max(bands.0), sb.max(bands.1));
     let m = a.len().saturating_sub(top + bottom);
-    m > 0 && find_shift(&a, &b, top, m).is_some()
+    if m == 0 {
+        return false;
+    }
+    if a[top..top + m] == b[top..top + m] {
+        return true; // same view
+    }
+    find_shift(&a, &b, top, m).is_some()
 }
 
 pub fn frames_identical(a: &RgbaImage, b: &RgbaImage) -> bool {
@@ -247,9 +261,28 @@ mod tests {
     fn detects_when_the_chosen_end_view_is_within_reach() {
         let p = page(1400, 160);
         let at = |s| window(&p, s, 300, 40, 20);
-        assert!(continues_into(&at(0), &at(200)));
-        assert!(continues_into(&at(0), &at(0)));
-        assert!(!continues_into(&at(0), &at(700)));
+        let bands = fixed_bands(&at(0), &at(260));
+        assert_eq!(bands, (40, 20));
+        assert!(continues_into(&at(0), &at(200), bands));
+        assert!(continues_into(&at(0), &at(0), bands));
+        assert!(!continues_into(&at(0), &at(700), bands));
+    }
+
+    #[test]
+    fn end_view_taken_while_the_window_was_inactive_still_matches() {
+        // The chosen view is captured while Aureen's bar has focus: the window's toolbar is
+        // greyed out, so its header rows differ from the frames taken while scrolling.
+        let p = page(1400, 160);
+        let at = |s| window(&p, s, 300, 40, 20);
+        let mut end = at(500);
+        for y in 0..40 {
+            for x in 0..160 {
+                end.put_pixel(x, y, Rgba([120, 120, 120, 255]));
+            }
+        }
+        let bands = fixed_bands(&at(0), &at(260));
+        assert!(continues_into(&at(260), &end, bands));
+        assert!(!continues_into(&at(0), &end, bands));
     }
 
     #[test]
@@ -276,9 +309,15 @@ pub fn to_jpeg_data_url(frames: &[RgbaImage]) -> Result<String, String> {
 
     let stitched = stitch(frames).ok_or_else(|| "沒有截到畫面".to_string())?;
     let mut img = image::DynamicImage::ImageRgba8(stitched);
+    // Retina frames are twice the needed width; keep text sharp but the file light.
+    const MAX_WIDTH: u32 = 2000;
+    if img.width() > MAX_WIDTH {
+        let height = ((img.height() as u64 * MAX_WIDTH as u64) / img.width() as u64).max(1) as u32;
+        img = img.thumbnail_exact(MAX_WIDTH, height);
+    }
     if img.height() > MAX_HEIGHT {
         let width = ((img.width() as u64 * MAX_HEIGHT as u64) / img.height() as u64).max(1) as u32;
-        img = img.resize_exact(width, MAX_HEIGHT, image::imageops::FilterType::Triangle);
+        img = img.thumbnail_exact(width, MAX_HEIGHT);
     }
     let rgb = img.to_rgb8();
     let mut buf: Vec<u8> = Vec::new();
