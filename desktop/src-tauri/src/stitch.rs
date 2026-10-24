@@ -93,6 +93,11 @@ pub fn frames_identical(a: &RgbaImage, b: &RgbaImage) -> bool {
 
 /// Joins the frames top to bottom, keeping a fixed header/footer only once.
 pub fn stitch(frames: &[RgbaImage]) -> Option<RgbaImage> {
+    stitch_with_bands(frames).map(|(img, _, _)| img)
+}
+
+/// Like [`stitch`], also returning the window's fixed top/bottom band heights.
+fn stitch_with_bands(frames: &[RgbaImage]) -> Option<(RgbaImage, usize, usize)> {
     let first = frames.first()?;
     let (w, h) = first.dimensions();
     let frames: Vec<&RgbaImage> = frames.iter().filter(|f| f.dimensions() == (w, h)).collect();
@@ -101,8 +106,12 @@ pub fn stitch(frames: &[RgbaImage]) -> Option<RgbaImage> {
     // (frame index, first row, row count) slices to copy, in order.
     let mut pieces: Vec<(usize, u32, u32)> = Vec::new();
     let mut last_bottom = 0usize;
+    let mut last_top = 0usize;
+    // Page Down moves by the same distance each time: when a pair can't be matched (a header
+    // that slid in, an animation), reuse the last good distance rather than repeating content.
+    let mut last_shift: Option<usize> = None;
     if frames.len() == 1 {
-        return Some(first.clone());
+        return Some((first.clone(), 0, 0));
     }
     for i in 1..frames.len() {
         if sigs[i - 1] == sigs[i] {
@@ -117,13 +126,20 @@ pub fn stitch(frames: &[RgbaImage]) -> Option<RgbaImage> {
             // First frame: everything except the static footer.
             pieces.push((0, 0, (h as usize - bottom) as u32));
         }
-        let new_rows = find_shift(&sigs[i - 1], &sigs[i], top, m).unwrap_or(m);
+        let new_rows = match find_shift(&sigs[i - 1], &sigs[i], top, m) {
+            Some(s) => {
+                last_shift = Some(s);
+                s
+            }
+            None => last_shift.filter(|s| *s < m).unwrap_or(m),
+        };
         let start = top + m - new_rows;
         pieces.push((i, start as u32, new_rows as u32));
         last_bottom = bottom;
+        last_top = top;
     }
     if pieces.is_empty() {
-        return Some(first.clone());
+        return Some((first.clone(), 0, 0));
     }
     let last = pieces.last().map(|p| p.0).unwrap_or(0);
     if last_bottom > 0 {
@@ -140,6 +156,38 @@ pub fn stitch(frames: &[RgbaImage]) -> Option<RgbaImage> {
         let view = frames[idx].view(0, start, w, rows);
         out.copy_from(&*view, 0, y).ok()?;
         y += rows;
+    }
+    Some((out, last_top, last_bottom))
+}
+
+/// Stitches frames taken top-down for "Capture to here" and cuts what lies below `end`
+/// (the view the user chose): the last Page Down can go up to one screen past it.
+pub fn stitch_to_end(frames: &[RgbaImage], end: &RgbaImage) -> Option<RgbaImage> {
+    let (img, top_band, bottom_band) = stitch_with_bands(frames)?;
+    let last = frames.last()?;
+    if frames.len() < 2 || last.dimensions() != end.dimensions() {
+        return Some(img);
+    }
+    let (e, l) = (row_signatures(end), row_signatures(last));
+    let m = e.len().saturating_sub(top_band + bottom_band);
+    if m == 0 || e[top_band..top_band + m] == l[top_band..top_band + m] {
+        return Some(img); // the last frame is the chosen view
+    }
+    // How far the last frame is below the chosen view.
+    let Some(past) = find_shift(&e, &l, top_band, m) else {
+        return Some(img);
+    };
+    let (w, h) = img.dimensions();
+    let keep_top = (h as usize).saturating_sub(bottom_band + past) as u32;
+    let mut out = RgbaImage::new(w, keep_top + bottom_band as u32);
+    out.copy_from(&*img.view(0, 0, w, keep_top), 0, 0).ok()?;
+    if bottom_band > 0 {
+        out.copy_from(
+            &*img.view(0, h - bottom_band as u32, w, bottom_band as u32),
+            0,
+            keep_top,
+        )
+        .ok()?;
     }
     Some(out)
 }
@@ -224,8 +272,63 @@ mod tests {
     fn encodes_a_jpeg_data_url() {
         let p = page(400, 120);
         let frames = vec![window(&p, 0, 200, 10, 0), window(&p, 150, 200, 10, 0)];
-        let url = to_jpeg_data_url(&frames).unwrap();
+        let url = to_jpeg_data_url(&frames, None).unwrap();
         assert!(url.starts_with("data:image/jpeg;base64,"));
+    }
+
+    #[test]
+    fn capture_to_here_downward_frames_are_cut_at_the_chosen_view() {
+        // The user stopped at scroll 700; Aureen counted 3 Page Ups to the top, then took
+        // 0, 260, 520, 780 going down — one step past the chosen view.
+        let (w, view, header, footer) = (160, 300, 40, 20);
+        let p = page(1400, w);
+        let frames: Vec<RgbaImage> = [0, 260, 520, 780]
+            .iter()
+            .map(|&s| window(&p, s, view, header, footer))
+            .collect();
+        let mut end = window(&p, 700, view, header, footer);
+        // The chosen view may show a site header that slid in while scrolling up.
+        for y in header..header + 30 {
+            for x in 0..w {
+                end.put_pixel(x, y, Rgba([10, 120, 200, 255]));
+            }
+        }
+        let out = stitch_to_end(&frames, &end).unwrap();
+        let stop = 700 + view;
+        assert_eq!(out.height(), header + stop + footer);
+        let mut expected = RgbaImage::new(w, header + stop + footer);
+        expected
+            .copy_from(&*frames[0].view(0, 0, w, header), 0, 0)
+            .unwrap();
+        expected
+            .copy_from(&*p.view(0, 0, w, stop), 0, header)
+            .unwrap();
+        expected
+            .copy_from(
+                &*frames[0].view(0, header + view, w, footer),
+                0,
+                header + stop,
+            )
+            .unwrap();
+        assert!(out.as_raw() == expected.as_raw());
+    }
+
+    #[test]
+    fn an_unmatchable_pair_reuses_the_last_scroll_distance_instead_of_repeating() {
+        let (w, view, header) = (160, 300, 40);
+        let p = page(1400, w);
+        let mut frames: Vec<RgbaImage> = [0, 260, 520, 780]
+            .iter()
+            .map(|&s| window(&p, s, view, header, 0))
+            .collect();
+        // A banner animates over frame 2 so it no longer matches frame 1.
+        for y in header..header + view {
+            for x in 0..w / 2 {
+                frames[2].put_pixel(x, y, Rgba([(y % 7) as u8 * 30, 200, 90, 255]));
+            }
+        }
+        let out = stitch(&frames).unwrap();
+        assert_eq!(out.height(), header + 780 + view);
     }
 
     #[test]
@@ -278,26 +381,40 @@ mod tests {
 
 /// Stitches, keeps the result within WebKit's canvas limits (so it can still be trimmed),
 /// and returns it as a JPEG data URL.
-pub fn to_jpeg_data_url(frames: &[RgbaImage]) -> Result<String, String> {
+pub fn to_jpeg_data_url(frames: &[RgbaImage], end: Option<&RgbaImage>) -> Result<String, String> {
     use base64::Engine;
+    // Kept within what WebKit can still draw on a canvas (for trimming).
     const MAX_HEIGHT: u32 = 30_000;
+    const MAX_PIXELS: u64 = 80_000_000;
 
-    let stitched = stitch(frames).ok_or_else(|| "沒有截到畫面".to_string())?;
-    let mut img = image::DynamicImage::ImageRgba8(stitched);
-    // Retina frames are twice the needed width; keep text sharp but the file light.
-    const MAX_WIDTH: u32 = 2000;
-    if img.width() > MAX_WIDTH {
-        let height = ((img.height() as u64 * MAX_WIDTH as u64) / img.width() as u64).max(1) as u32;
-        img = img.thumbnail_exact(MAX_WIDTH, height);
+    let stitched = match end {
+        Some(end) => stitch_to_end(frames, end),
+        None => stitch(frames),
     }
-    if img.height() > MAX_HEIGHT {
-        let width = ((img.width() as u64 * MAX_HEIGHT as u64) / img.height() as u64).max(1) as u32;
-        img = img.thumbnail_exact(width, MAX_HEIGHT);
+    .ok_or_else(|| "沒有截到畫面".to_string())?;
+    let mut img = image::DynamicImage::ImageRgba8(stitched);
+    let (w, h) = (img.width() as u64, img.height() as u64);
+    let scale = (MAX_HEIGHT as f64 / h as f64)
+        .min((MAX_PIXELS as f64 / (w * h) as f64).sqrt())
+        .min(1.0);
+    if scale < 1.0 {
+        let nw = ((w as f64 * scale) as u32).max(1);
+        let nh = ((h as f64 * scale) as u32).max(1);
+        img = img.resize_exact(nw, nh, image::imageops::FilterType::CatmullRom);
     }
     let rgb = img.to_rgb8();
+    let (w, h) = rgb.dimensions();
     let mut buf: Vec<u8> = Vec::new();
-    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut buf, 92)
-        .encode_image(&rgb)
+    // Full-resolution colour (4:4:4): subsampled chroma smears coloured text.
+    let mut encoder = jpeg_encoder::Encoder::new(&mut buf, 95);
+    encoder.set_sampling_factor(jpeg_encoder::SamplingFactor::R_4_4_4);
+    encoder
+        .encode(
+            rgb.as_raw(),
+            w as u16,
+            h as u16,
+            jpeg_encoder::ColorType::Rgb,
+        )
         .map_err(|e| e.to_string())?;
     Ok(format!(
         "data:image/jpeg;base64,{}",

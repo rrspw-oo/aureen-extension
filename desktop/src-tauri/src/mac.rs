@@ -394,12 +394,20 @@ const KEY_PAGE_DOWN: u16 = 121;
 
 const MAX_FRAMES: usize = 40;
 
-/// Captures the target window while scrolling it, one screen per frame, top to bottom.
+/// Frames of a full-page capture, in reading order, plus the view the user chose with
+/// "Capture to here" (used to cut the bottom exactly there).
+pub struct ScrollCapture {
+    pub frames: Vec<RgbaImage>,
+    pub end: Option<RgbaImage>,
+}
+
+/// Captures the target window while scrolling it down one screen at a time.
 ///
-/// * `to_here` ("Capture to here"): the view on screen now is the end. Frames are taken from
-///   here upward with Page Up until the top, then put in reading order — the end is exactly
-///   where the user stopped, with no image matching involved.
-/// * otherwise ("Whole page"): from the top (Home) downward with Page Down until the end.
+/// * "Whole page": from the top (Home) until the page stops moving.
+/// * "Capture to here" (`to_here`): the view on screen now is the end. Aureen first counts how
+///   many Page Ups bring the page to the top (nothing is kept from that pass: many sites slide
+///   a header in while scrolling up), then captures the same number of Page Downs from the top —
+///   the same direction as a whole-page capture — and the stitcher cuts at the chosen view.
 ///
 /// Also stops when `stop` is set or after `MAX_FRAMES`.
 pub fn capture_scrolling(
@@ -407,13 +415,13 @@ pub fn capture_scrolling(
     to_here: bool,
     stop: &AtomicBool,
     on_frame: impl Fn(usize),
-) -> Result<Vec<RgbaImage>, String> {
+) -> Result<ScrollCapture, String> {
     eprintln!(
         "[Aureen full page] mode={} pid={} window_id={:?} rect={:?}",
         if to_here {
-            "capture-to-here (upward from current view)"
+            "capture-to-here"
         } else {
-            "whole page (from top)"
+            "whole page"
         },
         target.pid,
         target.window_id,
@@ -421,15 +429,29 @@ pub fn capture_scrolling(
     );
     activate_pid(target.pid);
     sleep(Duration::from_millis(200));
-    eprintln!(
-        "[Aureen full page] frontmost pid after activation: {:?}",
-        frontmost_pid()
-    );
-    if !to_here {
-        key_code(KEY_HOME)?;
-        sleep(Duration::from_millis(350));
+
+    let mut end = None;
+    let mut steps: Option<usize> = None;
+    if to_here {
+        let chosen = capture_target(target)?;
+        let mut prev = chosen.clone();
+        let mut ups = 0;
+        while ups < MAX_FRAMES && !stop.load(Ordering::SeqCst) {
+            key_code(KEY_PAGE_UP)?;
+            sleep(Duration::from_millis(250));
+            let frame = capture_target(target)?;
+            if crate::stitch::frames_identical(&prev, &frame) {
+                break; // at the top
+            }
+            prev = frame;
+            ups += 1;
+        }
+        eprintln!("[Aureen full page] chosen view is {ups} Page Down(s) from the top");
+        end = Some(chosen);
+        steps = Some(ups);
     }
-    let step = if to_here { KEY_PAGE_UP } else { KEY_PAGE_DOWN };
+    key_code(KEY_HOME)?;
+    sleep(Duration::from_millis(350));
 
     let mut frames: Vec<RgbaImage> = Vec::new();
     loop {
@@ -438,11 +460,8 @@ pub fn capture_scrolling(
             .last()
             .is_some_and(|prev| crate::stitch::frames_identical(prev, &frame))
         {
-            eprintln!(
-                "[Aureen full page] frame unchanged after scrolling: reached the {}",
-                if to_here { "top" } else { "bottom" }
-            );
-            break; // the page stopped moving: top (to_here) or bottom (whole page) reached
+            eprintln!("[Aureen full page] page stopped moving: bottom reached");
+            break;
         }
         eprintln!(
             "[Aureen full page] frame {} {}x{}",
@@ -452,16 +471,14 @@ pub fn capture_scrolling(
         );
         frames.push(frame);
         on_frame(frames.len());
-        if stop.load(Ordering::SeqCst) || frames.len() >= MAX_FRAMES {
+        let reached = steps.is_some_and(|n| frames.len() > n);
+        if reached || stop.load(Ordering::SeqCst) || frames.len() >= MAX_FRAMES {
             break;
         }
-        key_code(step)?;
+        key_code(KEY_PAGE_DOWN)?;
         // Long enough for smooth scrolling to settle.
         sleep(Duration::from_millis(250));
     }
-    if to_here {
-        frames.reverse();
-    }
     eprintln!("[Aureen full page] done: {} frame(s)", frames.len());
-    Ok(frames)
+    Ok(ScrollCapture { frames, end })
 }

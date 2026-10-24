@@ -684,7 +684,8 @@ fn run_full_page(app: AppHandle, to_here: bool) {
     if cancelled {
         return;
     }
-    match result.and_then(|frames| stitch::to_jpeg_data_url(&frames)) {
+    match result.and_then(|capture| stitch::to_jpeg_data_url(&capture.frames, capture.end.as_ref()))
+    {
         Ok(data_url) => {
             show_panel(&app);
             let _ = app.emit(
