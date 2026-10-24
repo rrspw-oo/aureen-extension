@@ -40,9 +40,9 @@ export function FullPageBar() {
         ) : (
           <>
             <span className="w-2 h-2 rounded-full bg-[#C9A86C] animate-pulse" />
-            <span className="whitespace-nowrap">截取中… 第 {state.count} 張</span>
+            <span className="whitespace-nowrap">{t('fullPage.capturing', { count: state.count })}</span>
             <button type="button" onClick={() => choose('stop')} className={`${button} bg-[#C9A86C] border-[#C9A86C] text-[#2C2417]`}>
-              {t('fullPage.here')}
+              {t('fullPage.stop')}
             </button>
           </>
         )}

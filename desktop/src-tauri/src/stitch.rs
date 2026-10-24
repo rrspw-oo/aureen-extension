@@ -87,35 +87,6 @@ fn find_shift(a: &[(u64, bool)], b: &[(u64, bool)], top: usize, m: usize) -> Opt
     best.map(|(s, _, _)| s)
 }
 
-/// Height of the fixed toolbar / footer of a window, learned from two scrolled frames.
-pub fn fixed_bands(a: &RgbaImage, b: &RgbaImage) -> (usize, usize) {
-    if a.dimensions() != b.dimensions() {
-        return (0, 0);
-    }
-    static_bands(&row_signatures(a), &row_signatures(b))
-}
-
-/// True when `next` shows content at or a little below `prev` (within one screen).
-/// Used for "capture to here": scrolling stops once the user's chosen view is in reach.
-/// `bands` are the window's fixed toolbar/footer heights, ignored in the comparison: the
-/// chosen view may have been taken while the window looked different (e.g. inactive).
-pub fn continues_into(prev: &RgbaImage, next: &RgbaImage, bands: (usize, usize)) -> bool {
-    if prev.dimensions() != next.dimensions() {
-        return false;
-    }
-    let (a, b) = (row_signatures(prev), row_signatures(next));
-    let (st, sb) = static_bands(&a, &b);
-    let (top, bottom) = (st.max(bands.0), sb.max(bands.1));
-    let m = a.len().saturating_sub(top + bottom);
-    if m == 0 {
-        return false;
-    }
-    if a[top..top + m] == b[top..top + m] {
-        return true; // same view
-    }
-    find_shift(&a, &b, top, m).is_some()
-}
-
 pub fn frames_identical(a: &RgbaImage, b: &RgbaImage) -> bool {
     a.dimensions() == b.dimensions() && a.as_raw() == b.as_raw()
 }
@@ -258,31 +229,35 @@ mod tests {
     }
 
     #[test]
-    fn detects_when_the_chosen_end_view_is_within_reach() {
-        let p = page(1400, 160);
-        let at = |s| window(&p, s, 300, 40, 20);
-        let bands = fixed_bands(&at(0), &at(260));
-        assert_eq!(bands, (40, 20));
-        assert!(continues_into(&at(0), &at(200), bands));
-        assert!(continues_into(&at(0), &at(0), bands));
-        assert!(!continues_into(&at(0), &at(700), bands));
-    }
+    fn capture_to_here_frames_taken_upward_stop_exactly_at_the_chosen_view() {
+        // The user stopped at scroll 700 of a 1400 px page and chose "Capture to here":
+        // frames are taken going up with Page Up (clamped at the top), then reversed.
+        let (w, view, header, footer) = (160, 300, 40, 20);
+        let p = page(1400, w);
+        let mut frames: Vec<RgbaImage> = [700, 440, 180, 0]
+            .iter()
+            .map(|&s| window(&p, s, view, header, footer))
+            .collect();
+        frames.reverse();
+        let out = stitch(&frames).unwrap();
 
-    #[test]
-    fn end_view_taken_while_the_window_was_inactive_still_matches() {
-        // The chosen view is captured while Aureen's bar has focus: the window's toolbar is
-        // greyed out, so its header rows differ from the frames taken while scrolling.
-        let p = page(1400, 160);
-        let at = |s| window(&p, s, 300, 40, 20);
-        let mut end = at(500);
-        for y in 0..40 {
-            for x in 0..160 {
-                end.put_pixel(x, y, Rgba([120, 120, 120, 255]));
-            }
-        }
-        let bands = fixed_bands(&at(0), &at(260));
-        assert!(continues_into(&at(260), &end, bands));
-        assert!(!continues_into(&at(0), &end, bands));
+        let end = 700 + view; // bottom of the chosen view
+        assert_eq!(out.height(), header + end + footer);
+        let mut expected = RgbaImage::new(w, header + end + footer);
+        expected
+            .copy_from(&*frames[0].view(0, 0, w, header), 0, 0)
+            .unwrap();
+        expected
+            .copy_from(&*p.view(0, 0, w, end), 0, header)
+            .unwrap();
+        expected
+            .copy_from(
+                &*frames[0].view(0, header + view, w, footer),
+                0,
+                header + end,
+            )
+            .unwrap();
+        assert!(out.as_raw() == expected.as_raw());
     }
 
     #[test]

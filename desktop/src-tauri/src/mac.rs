@@ -300,7 +300,50 @@ pub fn front_target() -> Result<Target, String> {
     })
 }
 
+/// Grabs one window's pixels in-process (no screencapture process, no file round trip).
+/// `None` when the system refuses, in which case the caller falls back to screencapture.
+#[cfg(target_os = "macos")]
+fn grab_window(window_id: u32) -> Option<RgbaImage> {
+    use core_graphics::geometry::{CGPoint, CGRect, CGSize};
+    use core_graphics::window::{
+        create_image, kCGWindowImageBestResolution, kCGWindowImageBoundsIgnoreFraming,
+        kCGWindowListOptionIncludingWindow,
+    };
+    // CGRectNull: "the window's own bounds".
+    let null = CGRect::new(
+        &CGPoint::new(f64::INFINITY, f64::INFINITY),
+        &CGSize::new(0.0, 0.0),
+    );
+    let image = create_image(
+        null,
+        kCGWindowListOptionIncludingWindow,
+        window_id,
+        kCGWindowImageBoundsIgnoreFraming | kCGWindowImageBestResolution,
+    )?;
+    let (w, h, stride) = (image.width(), image.height(), image.bytes_per_row());
+    if w == 0 || h == 0 || image.bits_per_pixel() != 32 || stride < w * 4 {
+        return None;
+    }
+    let data = image.data();
+    let bytes = data.bytes();
+    if bytes.len() < stride * h {
+        return None;
+    }
+    // Screen images are 32-bit BGRA (little-endian ARGB); windows here are opaque.
+    let mut rgba = Vec::with_capacity(w * h * 4);
+    for row in bytes.chunks_exact(stride).take(h) {
+        for px in row[..w * 4].chunks_exact(4) {
+            rgba.extend_from_slice(&[px[2], px[1], px[0], 255]);
+        }
+    }
+    RgbaImage::from_raw(w as u32, h as u32, rgba)
+}
+
 pub fn capture_target(target: &Target) -> Result<RgbaImage, String> {
+    #[cfg(target_os = "macos")]
+    if let Some(img) = target.window_id.and_then(grab_window) {
+        return Ok(img);
+    }
     // BMP: no compression, so writing and reading each frame is quick.
     let path = std::env::temp_dir().join(format!("aureen-frame-{}.bmp", stamp()));
     let mut cmd = Command::new("/usr/sbin/screencapture");
@@ -346,13 +389,19 @@ fn key_code(code: u16) -> Result<(), String> {
 }
 
 const KEY_HOME: u16 = 115;
+const KEY_PAGE_UP: u16 = 116;
 const KEY_PAGE_DOWN: u16 = 121;
 
 const MAX_FRAMES: usize = 40;
 
-/// Scrolls the target window from the top with Page Down, capturing it after every step.
-/// With `to_here`, the view on screen now is the end: scrolling stops once it comes within
-/// reach. Also stops when the content stops moving, when `stop` is set, or after `MAX_FRAMES`.
+/// Captures the target window while scrolling it, one screen per frame, top to bottom.
+///
+/// * `to_here` ("Capture to here"): the view on screen now is the end. Frames are taken from
+///   here upward with Page Up until the top, then put in reading order — the end is exactly
+///   where the user stopped, with no image matching involved.
+/// * otherwise ("Whole page"): from the top (Home) downward with Page Down until the end.
+///
+/// Also stops when `stop` is set or after `MAX_FRAMES`.
 pub fn capture_scrolling(
     target: &Target,
     to_here: bool,
@@ -360,45 +409,33 @@ pub fn capture_scrolling(
     on_frame: impl Fn(usize),
 ) -> Result<Vec<RgbaImage>, String> {
     activate_pid(target.pid);
-    sleep(Duration::from_millis(250));
-    // Taken after the window is active again, so it looks exactly like the frames to come.
-    let end = if to_here {
-        Some(capture_target(target)?)
-    } else {
-        None
-    };
-    key_code(KEY_HOME)?;
-    sleep(Duration::from_millis(400));
+    sleep(Duration::from_millis(200));
+    if !to_here {
+        key_code(KEY_HOME)?;
+        sleep(Duration::from_millis(350));
+    }
+    let step = if to_here { KEY_PAGE_UP } else { KEY_PAGE_DOWN };
 
     let mut frames: Vec<RgbaImage> = Vec::new();
-    let mut bands = (0, 0);
     loop {
         let frame = capture_target(target)?;
         if frames
             .last()
             .is_some_and(|prev| crate::stitch::frames_identical(prev, &frame))
         {
-            break; // reached the end of the page
-        }
-        if frames.len() == 1 {
-            bands = crate::stitch::fixed_bands(&frames[0], &frame);
-        }
-        if let Some(end) = &end {
-            if crate::stitch::continues_into(&frame, end, bands) {
-                frames.push(frame);
-                frames.push(end.clone());
-                on_frame(frames.len());
-                break;
-            }
+            break; // the page stopped moving: top (to_here) or bottom (whole page) reached
         }
         frames.push(frame);
         on_frame(frames.len());
         if stop.load(Ordering::SeqCst) || frames.len() >= MAX_FRAMES {
             break;
         }
-        key_code(KEY_PAGE_DOWN)?;
+        key_code(step)?;
         // Long enough for smooth scrolling to settle.
-        sleep(Duration::from_millis(300));
+        sleep(Duration::from_millis(250));
+    }
+    if to_here {
+        frames.reverse();
     }
     Ok(frames)
 }
