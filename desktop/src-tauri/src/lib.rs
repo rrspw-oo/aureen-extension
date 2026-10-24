@@ -643,6 +643,7 @@ fn start_full_page_flow(app: AppHandle) {
 #[tauri::command]
 fn full_page_choice(app: AppHandle, choice: String) {
     let phase = FULL_PAGE_PHASE.load(Ordering::SeqCst);
+    eprintln!("[Aureen full page] bar choice: {choice} (phase {phase})");
     match (phase, choice.as_str()) {
         (PHASE_RUNNING, "stop") | (PHASE_RUNNING, "here") => {
             FULL_PAGE_STOP.store(true, Ordering::SeqCst)

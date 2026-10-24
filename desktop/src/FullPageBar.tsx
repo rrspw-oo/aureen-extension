@@ -46,6 +46,9 @@ export function FullPageBar() {
             </button>
           </>
         )}
+        <span className="text-[10px] text-[#B0A894] whitespace-nowrap" title="Aureen build">
+          {__AUREEN_BUILD__}
+        </span>
         <button type="button" onClick={() => choose('cancel')} className={`${button} bg-[#FBF5EA] border-[#E2D6BE] text-[#7E6332]`}>
           {t('fullPage.cancel')}
         </button>

@@ -408,8 +408,23 @@ pub fn capture_scrolling(
     stop: &AtomicBool,
     on_frame: impl Fn(usize),
 ) -> Result<Vec<RgbaImage>, String> {
+    eprintln!(
+        "[Aureen full page] mode={} pid={} window_id={:?} rect={:?}",
+        if to_here {
+            "capture-to-here (upward from current view)"
+        } else {
+            "whole page (from top)"
+        },
+        target.pid,
+        target.window_id,
+        target.rect
+    );
     activate_pid(target.pid);
     sleep(Duration::from_millis(200));
+    eprintln!(
+        "[Aureen full page] frontmost pid after activation: {:?}",
+        frontmost_pid()
+    );
     if !to_here {
         key_code(KEY_HOME)?;
         sleep(Duration::from_millis(350));
@@ -423,8 +438,18 @@ pub fn capture_scrolling(
             .last()
             .is_some_and(|prev| crate::stitch::frames_identical(prev, &frame))
         {
+            eprintln!(
+                "[Aureen full page] frame unchanged after scrolling: reached the {}",
+                if to_here { "top" } else { "bottom" }
+            );
             break; // the page stopped moving: top (to_here) or bottom (whole page) reached
         }
+        eprintln!(
+            "[Aureen full page] frame {} {}x{}",
+            frames.len() + 1,
+            frame.width(),
+            frame.height()
+        );
         frames.push(frame);
         on_frame(frames.len());
         if stop.load(Ordering::SeqCst) || frames.len() >= MAX_FRAMES {
@@ -437,5 +462,6 @@ pub fn capture_scrolling(
     if to_here {
         frames.reverse();
     }
+    eprintln!("[Aureen full page] done: {} frame(s)", frames.len());
     Ok(frames)
 }
