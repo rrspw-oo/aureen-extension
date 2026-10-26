@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Aureen - text highlights and region screenshots",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Highlight text and capture region screenshots on any webpage. Organize with tags and export to Markdown or JSON.",
   "icons": {
     "16": "icon-16.png",

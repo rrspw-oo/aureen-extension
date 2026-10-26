@@ -1,6 +1,6 @@
 {
   "name": "aureen",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Highlight text and screenshot web pages, tag them, and compare prices across shops. Local-only Chrome extension.",
   "type": "module",
   "scripts": {
