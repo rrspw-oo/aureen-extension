@@ -41,6 +41,7 @@ src/lib/highlight-store.ts         重點、標籤、設定的 chrome.storage �
 src/lib/capture-store.ts           截圖與截圖標籤的存取
 src/lib/dom.ts                     選取位置、文字搜尋備援、包上標記
 src/lib/handbook-export.ts         把 HTML 頁面用 html2canvas 與 jsPDF 轉成 PDF
+src/lib/capture-pdf.ts             把單張截圖存成分頁的 A4 PDF
 src/lib/export-import.ts           重點的 JSON 與 Markdown 匯出
 src/lib/ocr.ts                     請 service worker 辨識截圖文字
 src/lib/price.ts                   extractPrice 與 parsePriceInput
@@ -72,11 +73,15 @@ tests/price.test.ts                價格解析的單元測試
 - **區域：** `region-overlay.tsx` 讓你拖出一個框，接著用 `capture-screenshot-crop` 請 service worker 截下目前畫面並裁切。
 - **整頁：** `full-page-capture.ts` 先顯示「截到這裡」提示列，隱藏固定定位和 sticky 的元素，一次捲一個畫面高度，每段送一次 `capture-screenshot`，最後送 `stitch-segments` 拼接。最後一段會捲到剛好結束在你選的位置。
 
-兩種方式最後都會在側欄打開 `CaptureForm`。整頁截圖可以在儲存前裁切。
+兩種方式最後都會在側欄打開 `CaptureForm`。`TrimImageModal` 可以裁掉四邊中的任何一邊，新截圖和編輯已存截圖都適用，儲存時由 `CapturesView` 寫入新的圖片。`capture-pdf.ts` 把單張截圖存成 A4 直式 PDF：圖片縮放到頁面寬度減去 24 px 邊距，很高的圖會依需要切成多頁。
 
 ### 辨識文字與讀出價格
 
 `lib/ocr.ts` 送出 `ocr-capture` 給 service worker；service worker 在需要時建立 `offscreen.html`，再把圖片轉過去。offscreen 頁面會保留一個載入 `chi_tra+eng` 的 Tesseract worker。文字回來後，`extractPrice` 會找第一個貨幣符號旁邊的金額存成價格；如果你已經手動輸入過價格，就不會覆蓋。
+
+## 桌面版
+
+`desktop/` 是用 Tauri 做的 macOS 選單列程式，直接掛載 `src/sidebar/shell.tsx` 的同一個 `SidebarApp`。`desktop/src/chrome-shim.ts` 用 IndexedDB 代替 `chrome.storage` 與 `chrome.runtime`，`desktop/src-tauri/src/mac.rs` 透過 macOS 取得截圖與選取的文字，`desktop/src-tauri/src/stitch.rs` 負責拼接捲動截圖。這是原型，說明在 `desktop/README.md`。
 
 ## 資料
 

@@ -20,12 +20,12 @@ Aureen is the smallest tool I could make that fixes those four, without an accou
 ## What it does
 
 - **Highlight.** Select text and pick a color in the toolbar. Highlights are marked again when you come back to the page. If the page changed, Aureen finds the passage by its text.
-- **Capture.** Screenshot a region, or a full page that stops where the article ends, then trim the top and bottom.
+- **Capture.** Screenshot a region, or a full page that stops where the article ends. Trim any of the four edges, when you save it or later from the edit form.
 - **Read screenshots.** Recognize text in a screenshot offline (Traditional Chinese and English), copy it, and search by it.
 - **Tag and find.** Search everything, filter by tag, and see highlights grouped by page with the page you are on first. Enter only adds a tag; it never saves the form.
 - **Compare.** Pick a tag and see its screenshots side by side, cheapest first. Prices are read from the screenshot text and can be corrected.
 - **Link.** Connect a highlight to a screenshot (a spec and a product photo, say) and jump between them.
-- **Export.** A PDF handbook for screenshots or highlights, plus JSON and Markdown for highlights.
+- **Export.** Save any screenshot as an A4 PDF that is readable at full width (tall pages become several pages), a PDF handbook for screenshots or highlights, plus JSON and Markdown for highlights.
 - **Two languages.** The interface follows your browser (English or Traditional Chinese) and can be switched in the menu.
 
 | Selection toolbar | New highlight | Floating menu |
@@ -79,6 +79,10 @@ src/
 
 Data lives in `chrome.storage.local`. Highlights are stored with an XPath and character offsets for both ends of the selection, plus the text itself so they can be found again when the page changes. The longer version is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Desktop app (prototype)
+
+The `desktop/` folder holds a macOS menu bar app built with Tauri that reuses the sidebar: highlight the selected text of any app with `Cmd+Shift+1`, capture a region with `Cmd+Shift+2`, and capture a scrolling window with `Cmd+Shift+9`. It is a feasibility build, not a release. See [desktop/README.md](desktop/README.md) for how to run it and what it needs.
+
 ## Privacy
 
 No account, no analytics, no network requests. Highlights, screenshots and settings are stored by Chrome on your device. Text recognition runs offline with the Tesseract files bundled in the extension. Details: [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
@@ -101,7 +105,8 @@ The user interface is checked end to end by loading `dist` into the system Chrom
 - If the same passage appears twice on a page and the page layout has changed, the highlight is placed on the first match.
 - Text recognition covers Traditional Chinese and English, and the bundled models add about 15 MB to the extension.
 - Price reading takes the first amount next to a currency sign (NT$, $, 元 and others). Check it when a page shows an old and a sale price.
-- JSON and Markdown export cover highlights only. Screenshots export as a PDF handbook.
+- JSON and Markdown export cover highlights only. Screenshots export as single PDFs or as a PDF handbook.
+- A PDF page break can land in the middle of a line of text; Aureen does not look for a blank row to cut at.
 
 ## License
 

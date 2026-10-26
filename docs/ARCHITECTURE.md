@@ -41,6 +41,7 @@ src/lib/highlight-store.ts         highlights, tags and settings in chrome.stora
 src/lib/capture-store.ts           screenshots and their tags
 src/lib/dom.ts                     selection positions, text search fallback, wrapping marks
 src/lib/handbook-export.ts         HTML pages rendered to a PDF with html2canvas and jsPDF
+src/lib/capture-pdf.ts             one screenshot as an A4 PDF, sliced into pages
 src/lib/export-import.ts           JSON and Markdown export of highlights
 src/lib/ocr.ts                     asks the service worker to recognize a screenshot
 src/lib/price.ts                   extractPrice and parsePriceInput
@@ -72,11 +73,15 @@ Pages are matched with `normalizePageUrl`, so `#section` and `utm_*` parameters 
 - **Region:** `region-overlay.tsx` lets you drag a box, then `capture-screenshot-crop` asks the service worker to capture the visible tab and crop it.
 - **Full page:** `full-page-capture.ts` shows the "capture to here" bar, hides fixed and sticky elements, scrolls one viewport at a time and sends `capture-screenshot` for each segment, then `stitch-segments`. The last segment is scrolled so it ends exactly at the chosen point.
 
-Either way the sidebar opens `CaptureForm` with the image. Full-page images can be trimmed before saving.
+Either way the sidebar opens `CaptureForm` with the image. `TrimImageModal` cuts any of the four edges, both for a new capture and when editing a saved one; `CapturesView` writes the new image on save. `capture-pdf.ts` saves one screenshot as an A4 portrait PDF: the image is scaled to the page width minus 24 px margins and tall images are sliced into as many pages as needed.
 
 ### Recognizing text and reading prices
 
 `lib/ocr.ts` sends `ocr-capture` to the service worker, which creates `offscreen.html` if needed and forwards the image. The offscreen page keeps one Tesseract worker loaded with `chi_tra+eng`. When text comes back, `extractPrice` looks for the first amount next to a currency sign and stores it as the screenshot's price, unless you typed a price yourself.
+
+## Desktop app
+
+`desktop/` is a Tauri menu bar app for macOS that mounts the same `SidebarApp` from `src/sidebar/shell.tsx`. `desktop/src/chrome-shim.ts` stands in for `chrome.storage` and `chrome.runtime` on top of IndexedDB, `desktop/src-tauri/src/mac.rs` drives screenshots and the selected text through macOS, and `desktop/src-tauri/src/stitch.rs` stitches scrolling captures. It is a prototype and is documented in `desktop/README.md`.
 
 ## Data
 
